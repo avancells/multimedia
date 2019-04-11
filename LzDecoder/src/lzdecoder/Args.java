@@ -38,5 +38,5 @@ public class Args {
   private String groups;
 
   @Parameter(names = "-mode", description = "Use 0 to enable coding, 1 to enable decoding. Default is coding mode.")
-   boolean mode = false;
+   int mode = 0;
 }

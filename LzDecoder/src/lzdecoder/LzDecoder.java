@@ -74,7 +74,7 @@ public class LzDecoder {
         }
 
         
-        if(args.mode){
+        if(args.mode == 1){
             //decode 
             System.out.println("- Decoding mode -");
             
@@ -87,13 +87,12 @@ public class LzDecoder {
             for(char i: decode.toCharArray()){
                 desBuffer.add(String.valueOf(i));
             }
-            System.out.println(desBuffer.toString());
-            System.out.println(decode);
-            System.out.println(sequences.toString()); 
             
             //iterate inputData till its completely processed
-            decode = decodeString(decode);
-            System.out.println(decode);
+            while(!sequences.isEmpty()){
+                decode = decodeString(decode);
+            }            
+            System.out.println("Sequencia descodificada: " + decode);
             
         }else{
             //code  
@@ -134,6 +133,11 @@ public class LzDecoder {
     
     public static String decodeString(String decode){
         String elem1 = sequences.remove(0);
+        sequences.trimToSize();
+        if(sequences.isEmpty()){
+            decode += elem1;
+            return decode;
+        }
         
         // if the element read is a 0 or a 1, it means we need to insert 
         // directly that value to the decoded sequence
@@ -151,7 +155,38 @@ public class LzDecoder {
             // We obtain the second element, corresponding to D
             String elem2 = sequences.remove(0);
             
-            decode += "a";
+            int value1 = Integer.parseInt(elem1, 2);            
+            // if the value is 0, its equivalent to 2^length
+            if(value1 == 0){
+                value1 = (int) Math.pow(2, elem1.length());
+            }
+            
+            int value2 = Integer.parseInt(elem2, 2);
+            // if the value is 0, its equivalent to 2^length
+            if(value2 == 0){
+                value2 = (int) Math.pow(2, elem2.length());
+            }
+            
+                       
+            desBuffer.trimToSize();
+            
+            String entString = "";
+            String tempValue = "";
+            //Taking L as number of chars to get from the buffer
+            int desSize = desBuffer.size();
+            for(int i = 0; i < value1; i++){
+                
+                tempValue = desBuffer.get(desSize - value2 + i  );
+                entString += tempValue;
+                desBuffer.add(tempValue);
+            }
+            // clear the buffer
+            for(int i = 0; i < value1; i++){
+                desBuffer.remove(0);
+            }
+            desBuffer.trimToSize();
+            
+            decode += entString;
             return decode;
         }
     }
@@ -200,18 +235,18 @@ public class LzDecoder {
         int nDes = (int) (Math.log(desBuffer.size())/Math.log(2));
         int nEnt = (int) (Math.log(entBuffer.size())/Math.log(2));
         
-        System.out.println(tempEnt.length());
-        System.out.println(desBuffer.size() - posMatch);
+        //System.out.println(tempEnt.length());
+        //System.out.println(desBuffer.size() - posMatch);
         
         String codedL = "";
-        if(tempEnt.length() == entBuffer.size()){
+        if(tempEnt.length() == entBuffer.size()){ // if the length is the maximum, set to 0
             codedL = String.format("%" + nEnt + "s", Integer.toBinaryString(0)).replace(' ', '0');
         }else{
             codedL = String.format("%" + nEnt + "s", Integer.toBinaryString(tempEnt.length())).replace(' ', '0');
         }
         
         String codedD = "";
-        if(desBuffer.size() - posMatch == desBuffer.size()){
+        if(desBuffer.size() - posMatch == desBuffer.size()){ // if the length is the maximum, set to 0
             codedD = String.format("%" + nDes + "s", Integer.toBinaryString(0)).replace(' ', '0');
         }else{
             codedD = String.format("%" + nDes + "s", Integer.toBinaryString(desBuffer.size() - posMatch)).replace(' ', '0');
@@ -233,8 +268,8 @@ public class LzDecoder {
                 desBuffer.remove(0);
                 desBuffer.trimToSize();
             }else{
-                for(int i = 0; i < tempEnt.length() - 1; i++){
-                    desBuffer.remove(i);
+                for(int i = 0; i < tempEnt.length() ; i++){
+                    desBuffer.remove(0);
                     desBuffer.trimToSize();
 
                 }
@@ -242,9 +277,9 @@ public class LzDecoder {
             
             
         }  
-        System.out.println("Dades restants: " + inputData);    
-        System.out.println("Codificació: " + code);
-        System.out.println("---------");
+        //System.out.println("Dades restants: " + inputData);    
+        //System.out.println("Codificació: " + code);
+        //System.out.println("---------");
                
         return code;
         
