@@ -22,13 +22,14 @@ public class LzDecoder {
     
     public static ArrayList<String> desBuffer = new ArrayList<>();
     public static ArrayList<String> entBuffer = new ArrayList<>();
+    public static ArrayList<String> sequences = new ArrayList<>();
     public static String inputData = "";
 
     /**
      * @param argv the command line arguments
      */
     public static void main(String[] argv) {
-        String[] argt = { "-i", "input_code.txt"};
+        String[] argt = { "-i", "input_decode.txt", "-mode", "1"};
         
         Args args = new Args();
         JCommander.newBuilder().addObject(args).build().parse(argt);
@@ -67,7 +68,7 @@ public class LzDecoder {
         
         
         //Parameter checking
-        if( args.mEnt % 2 != 0 || args.mDes% 2 != 0 || args.mEnt > args.mDes || args.mEnt + args.mDes > inputData.length()){
+        if( !esPotencia(args.mEnt) || !esPotencia(args.mDes) || args.mEnt > args.mDes || args.mEnt + args.mDes > inputData.length()){
             System.out.println("Parameters used have wrong values. Check mEnt, mDes and the input data size.");
             System.exit(0);
         }
@@ -75,18 +76,40 @@ public class LzDecoder {
         
         if(args.mode){
             //decode 
+            System.out.println("- Decoding mode -");
+            
+            for(String i: inputData.split(" ")){
+                sequences.add(i);
+            }
+            
+            //init decoded sequence, and fill desBuffer with that data
+            String decode = sequences.remove(0);
+            for(char i: decode.toCharArray()){
+                desBuffer.add(String.valueOf(i));
+            }
+            System.out.println(desBuffer.toString());
+            System.out.println(decode);
+            System.out.println(sequences.toString()); 
+            
+            //iterate inputData till its completely processed
+            decode = decodeString(decode);
+            System.out.println(decode);
+            
         }else{
-            //code
+            //code  
+            System.out.println("- Coding mode -");
             String code = inputData.substring(0, args.mDes) + " ";
             //System.out.println(coded);
             int pos = 0;
-            code = searchBuffer(args, code);
-            code = searchBuffer(args, code);
+            while(inputData.length() >= args.mEnt){
+                code = searchBuffer(args, code);
+            }
+            System.out.println(inputData);
+            code += inputData;
+            
+            System.out.println("Coded result: " + code);
+            
         }
-        
-        
-        
-        
         
         
         
@@ -108,6 +131,34 @@ public class LzDecoder {
                     desBuffer.add(entBuffer.remove(0));
                 }            
             }*/
+    
+    public static String decodeString(String decode){
+        String elem1 = sequences.remove(0);
+        
+        // if the element read is a 0 or a 1, it means we need to insert 
+        // directly that value to the decoded sequence
+        if(elem1.length() == 1){
+            // Add the element to the decoded sequence
+            decode += elem1;
+            // Remove the first element of the buffer
+            desBuffer.remove(0);
+            // Add the new element to the end of it
+            desBuffer.add(elem1);
+            
+            desBuffer.trimToSize();
+            return decode;
+        }else{ // if the element read is longer than 1, its part of a coded pair (L)
+            // We obtain the second element, corresponding to D
+            String elem2 = sequences.remove(0);
+            
+            decode += "a";
+            return decode;
+        }
+    }
+    
+    public static boolean esPotencia(int x){      
+        return (x & (x - 1)) == 0;
+    }
     
     public static String searchBuffer(Args args, String code){
         while(desBuffer.size() != args.mDes || entBuffer.size() != args.mEnt){ 
@@ -149,10 +200,26 @@ public class LzDecoder {
         int nDes = (int) (Math.log(desBuffer.size())/Math.log(2));
         int nEnt = (int) (Math.log(entBuffer.size())/Math.log(2));
         
-        String codedL = String.format("%" + nEnt + "s", Integer.toBinaryString(tempEnt.length())).replace(' ', '0');
-        String codedD = String.format("%" + nDes + "s", Integer.toBinaryString(desBuffer.size() - posMatch)).replace(' ', '0');
-        //System.out.println("L: " + codedL);
-        //System.out.println("D: " + codedD);
+        System.out.println(tempEnt.length());
+        System.out.println(desBuffer.size() - posMatch);
+        
+        String codedL = "";
+        if(tempEnt.length() == entBuffer.size()){
+            codedL = String.format("%" + nEnt + "s", Integer.toBinaryString(0)).replace(' ', '0');
+        }else{
+            codedL = String.format("%" + nEnt + "s", Integer.toBinaryString(tempEnt.length())).replace(' ', '0');
+        }
+        
+        String codedD = "";
+        if(desBuffer.size() - posMatch == desBuffer.size()){
+            codedD = String.format("%" + nDes + "s", Integer.toBinaryString(0)).replace(' ', '0');
+        }else{
+            codedD = String.format("%" + nDes + "s", Integer.toBinaryString(desBuffer.size() - posMatch)).replace(' ', '0');
+        }
+        
+        
+        //System.out.println("L: " + codedL + " nEnt: " + nEnt);
+        //System.out.println("D: " + codedD + " nDes: " + nDes);
         if(posMatch == -1){
             code += tempEnt.substring(0,1) + " ";
             desBuffer.remove(0);
@@ -170,8 +237,6 @@ public class LzDecoder {
                     desBuffer.remove(i);
                     desBuffer.trimToSize();
 
-                    entBuffer.remove(i);
-                    entBuffer.trimToSize();
                 }
             }
             
