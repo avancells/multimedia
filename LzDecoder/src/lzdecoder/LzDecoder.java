@@ -30,7 +30,7 @@ public class LzDecoder {
      * @param argv the command line arguments
      */
     public static void main(String[] argv) {
-        String[] argt = { "-i", "random", "-mode", "0"};
+        String[] argt = { "-i", "random", "-mode", "2", "-randSize", "50000"};
         
         Args args = new Args();
         JCommander.newBuilder().addObject(args).build().parse(argt);
@@ -79,7 +79,7 @@ public class LzDecoder {
         if(args.mode == 1){
             decodeSeq(inputData);
             
-        }else{
+        }else if(args.mode == 2){
             //code  
             System.out.println("- Coding mode -");
             String code = inputData.substring(0, args.mDes) + " ";
@@ -93,31 +93,33 @@ public class LzDecoder {
             System.out.println("Coded result: " + code);
             
             //Check if correct
-            if (savedInput.equals(decodeSeq(code))) {
-                System.out.println("PERF");
+            String decodedSequence = decodeSeq(code);
+            if (savedInput.equals(decodedSequence)) {
+                System.out.println("CHECK = OK");
             } else {
-                System.out.println("FFFFFFFFFF");
+                System.out.println("CHECK = NOT OK");
             }
+            //stats
+            
+            
+            
+        }else{
+             //code  
+            System.out.println("- Coding mode -");
+            String code = inputData.substring(0, args.mDes) + " ";
+            //System.out.println(coded);
+            while(!inputData.isEmpty() || entBuffer.size() == args.mEnt){
+                code = searchBuffer(args, code);
+            }
+            //System.out.println(inputData);
+            
+            
+            System.out.println("Coded result: " + code);
         }
         
         
 
     }
-    /*
-    if(entBuffer.size() < args.mEnt){
-                int freeSpots = args.mEnt - entBuffer.size();
-                    for(int i= 0; i < freeSpots; i++){
-                        entBuffer.add(inputData.substring(0,1));
-                        inputData = inputData.substring(1);
-                    }           
-            }            
-            
-            if(desBuffer.size() < args.mDes){
-                int freeSpots = args.mDes - desBuffer.size();
-                for(int i= 0; i < freeSpots; i++){
-                    desBuffer.add(entBuffer.remove(0));
-                }            
-            }*/
     
     public static String decodeString(String decode){
         String elem1 = sequences.remove(0);
@@ -195,6 +197,18 @@ public class LzDecoder {
                 if(!inputData.isEmpty()){
                     entBuffer.add(inputData.substring(0,1));
                     inputData = inputData.substring(1);
+                }else{
+                    desBuffer.trimToSize();
+                    entBuffer.trimToSize();
+                    if(desBuffer.size() == args.mDes){
+                        int entSize = entBuffer.size();
+                        for(int i = 0; i < entSize; i++){
+                            code += entBuffer.remove(0);
+                        }
+                        return code;
+                        
+                    }
+                    
                 }
                     
             }            
@@ -206,8 +220,8 @@ public class LzDecoder {
             
         }
         
-        System.out.println(desBuffer.toString());
-        System.out.println(entBuffer.toString());
+        //System.out.println(desBuffer.toString());
+        //System.out.println(entBuffer.toString());
         
 
         

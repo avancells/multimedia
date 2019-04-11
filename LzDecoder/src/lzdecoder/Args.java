@@ -37,6 +37,6 @@ public class Args {
   @Parameter(names = "-groups", description = "Comma-separated list of group names to be run")
   private String groups;
 
-  @Parameter(names = "-mode", description = "Use 0 to enable coding, 1 to enable decoding. Default is coding mode.")
+  @Parameter(names = "-mode", description = "Use 0 to enable coding, 1 to enable decoding, 2 to enable checking mode(code-decode-compare). Default is coding mode.")
    int mode = 0;
 }
