@@ -23,13 +23,14 @@ public class LzDecoder {
     public static ArrayList<String> desBuffer = new ArrayList<>();
     public static ArrayList<String> entBuffer = new ArrayList<>();
     public static ArrayList<String> sequences = new ArrayList<>();
+    public static String savedInput = "";
     public static String inputData = "";
 
     /**
      * @param argv the command line arguments
      */
     public static void main(String[] argv) {
-        String[] argt = { "-i", "console", "-mode", "1"};
+        String[] argt = { "-i", "random", "-mode", "0"};
         
         Args args = new Args();
         JCommander.newBuilder().addObject(args).build().parse(argt);
@@ -65,6 +66,7 @@ public class LzDecoder {
             }
         }
         System.out.println("Sequence: " + inputData);
+        savedInput = inputData;
         
         
         //Parameter checking
@@ -75,24 +77,7 @@ public class LzDecoder {
 
         
         if(args.mode == 1){
-            //decode 
-            System.out.println("- Decoding mode -");
-            
-            for(String i: inputData.split(" ")){
-                sequences.add(i);
-            }
-            
-            //init decoded sequence, and fill desBuffer with that data
-            String decode = sequences.remove(0);
-            for(char i: decode.toCharArray()){
-                desBuffer.add(String.valueOf(i));
-            }
-            
-            //iterate inputData till its completely processed
-            while(!sequences.isEmpty()){
-                decode = decodeString(decode);
-            }            
-            System.out.println("Sequencia descodificada: " + decode);
+            decodeSeq(inputData);
             
         }else{
             //code  
@@ -107,12 +92,16 @@ public class LzDecoder {
             
             System.out.println("Coded result: " + code);
             
+            //Check if correct
+            if (savedInput.equals(decodeSeq(code))) {
+                System.out.println("PERF");
+            } else {
+                System.out.println("FFFFFFFFFF");
+            }
         }
         
         
-        
-        //Return result to output
-        
+
     }
     /*
     if(entBuffer.size() < args.mEnt){
@@ -220,8 +209,7 @@ public class LzDecoder {
         System.out.println(desBuffer.toString());
         System.out.println(entBuffer.toString());
         
-        
-        
+
         
         //search matching data
         String tempEnt = "";
@@ -307,6 +295,28 @@ public class LzDecoder {
         return code;
         
         
+    }
+    
+    public static String decodeSeq(String toDecode) {
+        //decode 
+        System.out.println("- Decoding mode -");
+
+        for(String i: toDecode.split(" ")){
+            sequences.add(i);
+        }
+
+        //init decoded sequence, and fill desBuffer with that data
+        String decode = sequences.remove(0);
+        for(char i: decode.toCharArray()){
+            desBuffer.add(String.valueOf(i));
+        }
+
+        //iterate inputData till its completely processed
+        while(!sequences.isEmpty()){
+            decode = decodeString(decode);
+        }            
+        System.out.println("Sequencia descodificada: " + decode);
+        return decode;
     }
 
     public static String getStringBuffer(int size, ArrayList<String> buffer){
