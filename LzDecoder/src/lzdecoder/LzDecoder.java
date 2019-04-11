@@ -29,7 +29,7 @@ public class LzDecoder {
      * @param argv the command line arguments
      */
     public static void main(String[] argv) {
-        String[] argt = { "-i", "input_decode.txt", "-mode", "1"};
+        String[] argt = { "-i", "console", "-mode", "1"};
         
         Args args = new Args();
         JCommander.newBuilder().addObject(args).build().parse(argt);
@@ -39,7 +39,7 @@ public class LzDecoder {
         if(args.input.equals("console")){
             System.out.println("Reading input from console: ");
             inputData = scanner.nextLine();
-            if (inputData.matches("^[01]+$")) {
+            if (inputData.matches("^[01 ]+$")) {
                 // accept this input
                 System.out.println("Input accepted.");
             }else{
@@ -99,12 +99,11 @@ public class LzDecoder {
             System.out.println("- Coding mode -");
             String code = inputData.substring(0, args.mDes) + " ";
             //System.out.println(coded);
-            int pos = 0;
-            while(inputData.length() >= args.mEnt){
+            while(!inputData.isEmpty() || entBuffer.size() == args.mEnt){
                 code = searchBuffer(args, code);
             }
-            System.out.println(inputData);
-            code += inputData;
+            //System.out.println(inputData);
+            
             
             System.out.println("Coded result: " + code);
             
@@ -196,10 +195,19 @@ public class LzDecoder {
     }
     
     public static String searchBuffer(Args args, String code){
+        if(inputData.isEmpty()){
+            System.out.println("cagarro " + entBuffer.toString());
+            System.out.println("titola " + desBuffer.toString());
+            entBuffer.clear();
+            return code;
+        }
         while(desBuffer.size() != args.mDes || entBuffer.size() != args.mEnt){ 
             if(entBuffer.size() < args.mEnt){
-                entBuffer.add(inputData.substring(0,1));
-                inputData = inputData.substring(1);    
+                if(!inputData.isEmpty()){
+                    entBuffer.add(inputData.substring(0,1));
+                    inputData = inputData.substring(1);
+                }
+                    
             }            
             
             if(desBuffer.size() < args.mDes){
@@ -208,6 +216,7 @@ public class LzDecoder {
             }
             
         }
+        
         System.out.println(desBuffer.toString());
         System.out.println(entBuffer.toString());
         
@@ -280,6 +289,20 @@ public class LzDecoder {
         //System.out.println("Dades restants: " + inputData);    
         //System.out.println("Codificació: " + code);
         //System.out.println("---------");
+        
+        if(inputData.isEmpty()){
+            for(int i = 0; i < args.mDes - desBuffer.size(); i++){
+                entBuffer.remove(0);
+            }
+            for(String i: entBuffer){
+                System.out.println("puta" + entBuffer.toString());
+                code += i;
+            }
+            System.out.println("TEPUTAMERNAIE");
+            System.out.println(entBuffer.toString());
+            System.out.println(desBuffer.toString());
+            System.out.println(inputData);
+        }
                
         return code;
         
