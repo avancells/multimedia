@@ -29,7 +29,7 @@ public class LzDecoder {
      * @param argv the command line arguments
      */
     public static void main(String[] argv) {
-        String[] argt = { "-i", "console", "-mode", "1"};
+        String[] argt = { "-i", "random", "-mode", "0", "-randSize", "250"};
         
         Args args = new Args();
         JCommander.newBuilder().addObject(args).build().parse(argt);
@@ -196,8 +196,8 @@ public class LzDecoder {
     
     public static String searchBuffer(Args args, String code){
         if(inputData.isEmpty()){
-            System.out.println("cagarro " + entBuffer.toString());
-            System.out.println("titola " + desBuffer.toString());
+            //System.out.println("cagarro " + entBuffer.toString());
+            //System.out.println("titola " + desBuffer.toString());
             entBuffer.clear();
             return code;
         }
@@ -206,6 +206,16 @@ public class LzDecoder {
                 if(!inputData.isEmpty()){
                     entBuffer.add(inputData.substring(0,1));
                     inputData = inputData.substring(1);
+                }else{
+                    
+                    for(int i = 0; i < args.mDes - desBuffer.size(); i++){
+                        entBuffer.remove(0);
+                    }
+                    for(String i: entBuffer){
+                        //System.out.println("puta" + entBuffer.toString());
+                        code += i;
+                    }
+                    return code;
                 }
                     
             }            
@@ -217,8 +227,8 @@ public class LzDecoder {
             
         }
         
-        System.out.println(desBuffer.toString());
-        System.out.println(entBuffer.toString());
+        //System.out.println(desBuffer.toString());
+        //System.out.println(entBuffer.toString());
         
         
         
@@ -291,17 +301,7 @@ public class LzDecoder {
         //System.out.println("---------");
         
         if(inputData.isEmpty()){
-            for(int i = 0; i < args.mDes - desBuffer.size(); i++){
-                entBuffer.remove(0);
-            }
-            for(String i: entBuffer){
-                System.out.println("puta" + entBuffer.toString());
-                code += i;
-            }
-            System.out.println("TEPUTAMERNAIE");
-            System.out.println(entBuffer.toString());
-            System.out.println(desBuffer.toString());
-            System.out.println(inputData);
+            
         }
                
         return code;
