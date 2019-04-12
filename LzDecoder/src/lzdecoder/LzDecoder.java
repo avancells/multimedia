@@ -204,11 +204,11 @@ public class LzDecoder {
 
         //search matching data
         String tempEnt = "";
-        //Fraccio de desBuffer que anirem buscant
+        //Conversio del buffer lliscant a String
         String tempDes = getStringBuffer(desBuffer.size(), desBuffer);
         int posMatch = -1;
         for(int i = entBuffer.size(); i != 0; i--){
-            //Fraccio de tempEnt a buscar
+            //Conversio del buffer d'entrada a String
             tempEnt = getStringBuffer(i, entBuffer);
             if(tempDes.contains(tempEnt)){
                 //Agafem la posicio de la coincidencia
@@ -295,7 +295,7 @@ public class LzDecoder {
         System.out.println("Sequencia descodificada: " + decode);
         return decode;
     }
-    //Anem fent substrings
+    //Conversio d'un ArrayList a un String amb els elements d'aquest
     public static String getStringBuffer(int size, ArrayList<String> buffer){
         String result = "";
         for(int i = 0; i< size; i++){
