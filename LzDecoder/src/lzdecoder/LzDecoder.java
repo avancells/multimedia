@@ -1,4 +1,3 @@
-
 package lzdecoder;
 
 import com.beust.jcommander.JCommander;
@@ -26,11 +25,16 @@ public class LzDecoder {
      * @param argv the command line arguments
      */
     public static void main(String[] argv) {
-        String[] argt = { "-i", "random", "-mode", "2", "-randSize", "50000"};
         
         Args args = new Args();
-        JCommander.newBuilder().addObject(args).build().parse(argt);
+        JCommander.newBuilder().addObject(args).build().parse(argv);
         Scanner scanner = new Scanner(System.in);
+        JCommander jCommander = new JCommander(args, argv);
+        System.out.println(args.help);
+        if (args.help == 1) {
+            jCommander.usage();
+            return;
+        }
         
         //Load input
         if(args.input.equals("console")){
@@ -91,6 +95,11 @@ public class LzDecoder {
             } else {
                 System.out.println("CHECK = NOT OK");
             }
+            
+            System.out.println("Mida original: " + savedInput.length());
+            System.out.println("Mida codificada: " + code.length());
+            System.out.printf("Factor de compressió: %.3f:1 \n" , (float) savedInput.length() / (float) code.length());
+            
         //Codificar
         } else { 
             System.out.println("- Coding mode -");
@@ -321,4 +330,3 @@ public class LzDecoder {
         }
     }
 }
-

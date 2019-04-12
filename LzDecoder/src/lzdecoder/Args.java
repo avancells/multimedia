@@ -34,8 +34,8 @@ public class Args {
    Integer randLen = 25;
   
   
-  @Parameter(names = "-groups", description = "Comma-separated list of group names to be run")
-  private String groups;
+  @Parameter(names = "-help", description = "Prompts the help.")
+    int help = 0;
 
   @Parameter(names = "-mode", description = "Use 0 to enable coding, 1 to enable decoding, 2 to enable checking mode(code-decode-compare). Default is coding mode.")
    int mode = 0;
