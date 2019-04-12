@@ -1,8 +1,4 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
+
 package lzdecoder;
 
 import com.beust.jcommander.JCommander;
@@ -75,53 +71,41 @@ public class LzDecoder {
             System.exit(0);
         }
 
-        
+        //Descodificar
         if(args.mode == 1){
             decodeSeq(inputData);
-            
-        }else if(args.mode == 2){
-            //code  
+        //Codificar amb comprovacio 
+        } else if(args.mode == 2){
             System.out.println("- Coding mode -");
             String code = inputData.substring(0, args.mDes) + " ";
-            //System.out.println(coded);
+            //Mentre tinguem data que processar o elements en el buffer...
             while(!inputData.isEmpty() || entBuffer.size() == args.mEnt){
                 code = searchBuffer(args, code);
             }
-            //System.out.println(inputData);
-            
-            
             System.out.println("Coded result: " + code);
             
-            //Check if correct
+            //Procediment que comprova si la sequencia original concorda amb la descodificacio de la codificacio feta per nosaltres
             String decodedSequence = decodeSeq(code);
             if (savedInput.equals(decodedSequence)) {
                 System.out.println("CHECK = OK");
             } else {
                 System.out.println("CHECK = NOT OK");
             }
-            //stats
-            
-            
-            
-        }else{
-             //code  
+        //Codificar
+        } else { 
             System.out.println("- Coding mode -");
             String code = inputData.substring(0, args.mDes) + " ";
-            //System.out.println(coded);
+            //Mentre tinguem data que processar o elements en el buffer...
             while(!inputData.isEmpty() || entBuffer.size() == args.mEnt){
                 code = searchBuffer(args, code);
             }
-            //System.out.println(inputData);
-            
-            
             System.out.println("Coded result: " + code);
         }
-        
-        
-
     }
     
+    //Funcio que descodifica una sequencia codificada.
     public static String decodeString(String decode){
+        //Treiem finestra deslizante
         String elem1 = sequences.remove(0);
         sequences.trimToSize();
         if(sequences.isEmpty()){
@@ -138,34 +122,27 @@ public class LzDecoder {
             desBuffer.remove(0);
             // Add the new element to the end of it
             desBuffer.add(elem1);
-            
             desBuffer.trimToSize();
             return decode;
         }else{ // if the element read is longer than 1, its part of a coded pair (L)
             // We obtain the second element, corresponding to D
             String elem2 = sequences.remove(0);
-            
             int value1 = Integer.parseInt(elem1, 2);            
             // if the value is 0, its equivalent to 2^length
             if(value1 == 0){
                 value1 = (int) Math.pow(2, elem1.length());
             }
-            
             int value2 = Integer.parseInt(elem2, 2);
             // if the value is 0, its equivalent to 2^length
             if(value2 == 0){
                 value2 = (int) Math.pow(2, elem2.length());
-            }
-            
-                       
+            }       
             desBuffer.trimToSize();
-            
             String entString = "";
             String tempValue = "";
             //Taking L as number of chars to get from the buffer
             int desSize = desBuffer.size();
             for(int i = 0; i < value1; i++){
-                
                 tempValue = desBuffer.get(desSize - value2 + i  );
                 entString += tempValue;
                 desBuffer.add(tempValue);
@@ -175,67 +152,67 @@ public class LzDecoder {
                 desBuffer.remove(0);
             }
             desBuffer.trimToSize();
-            
             decode += entString;
             return decode;
         }
     }
     
+    //Funcio que retorna si un nombre es potencia de 2
     public static boolean esPotencia(int x){      
         return (x & (x - 1)) == 0;
     }
     
+    //Funcio que realitza la major part de la codificacio
+    //Omple i buida els buffers
+    //Llegeix i codifica
     public static String searchBuffer(Args args, String code){
+        //Res mes a codificar
         if(inputData.isEmpty()){
-            System.out.println("cagarro " + entBuffer.toString());
-            System.out.println("titola " + desBuffer.toString());
             entBuffer.clear();
             return code;
         }
-        while(desBuffer.size() != args.mDes || entBuffer.size() != args.mEnt){ 
+        //Nomes parara quan la mida del buffer deslizante i el d'entrada siguin diferents respecte els arguments d'entrada
+        while(desBuffer.size() != args.mDes || entBuffer.size() != args.mEnt){
+            //Separem condicions
             if(entBuffer.size() < args.mEnt){
+                //Si no tenim mes dades a codificar
                 if(!inputData.isEmpty()){
+                    //Treiem el primer digit
                     entBuffer.add(inputData.substring(0,1));
+                    //Ens quedem amb la resta d'InputData excepte el primer digit
                     inputData = inputData.substring(1);
                 }else{
+                    //Mides correctes
                     desBuffer.trimToSize();
                     entBuffer.trimToSize();
                     if(desBuffer.size() == args.mDes){
                         int entSize = entBuffer.size();
+                        //Treiem els elements del entBuffer que no es codifiquen i s'afegeixen a la codificacio. Retornem
                         for(int i = 0; i < entSize; i++){
                             code += entBuffer.remove(0);
                         }
                         return code;
-                        
                     }
-                    
-                }
-                    
+                } 
             }            
-            
             if(desBuffer.size() < args.mDes){
                 desBuffer.add(entBuffer.remove(0));     
                 entBuffer.trimToSize();
             }
             
         }
-        
-        //System.out.println(desBuffer.toString());
-        //System.out.println(entBuffer.toString());
-        
 
-        
         //search matching data
         String tempEnt = "";
+        //Fraccio de desBuffer que anirem buscant
         String tempDes = getStringBuffer(desBuffer.size(), desBuffer);
         int posMatch = -1;
         for(int i = entBuffer.size(); i != 0; i--){
+            //Fraccio de tempEnt a buscar
             tempEnt = getStringBuffer(i, entBuffer);
-            
             if(tempDes.contains(tempEnt)){
-                //System.out.println("\n" + tempEnt);
-                //System.out.println(tempDes.indexOf(tempEnt));
-                
+                //Agafem la posicio de la coincidencia
+                //Parem al trobar la primera coincidencia
                 posMatch = tempDes.indexOf(tempEnt);
                 break;
             }   
@@ -246,32 +223,26 @@ public class LzDecoder {
         int nDes = (int) (Math.log(desBuffer.size())/Math.log(2));
         int nEnt = (int) (Math.log(entBuffer.size())/Math.log(2));
         
-        //System.out.println(tempEnt.length());
-        //System.out.println(desBuffer.size() - posMatch);
-        
+        //Codificacio a L i D i addicio de zeros 
         String codedL = "";
         if(tempEnt.length() == entBuffer.size()){ // if the length is the maximum, set to 0
             codedL = String.format("%" + nEnt + "s", Integer.toBinaryString(0)).replace(' ', '0');
         }else{
             codedL = String.format("%" + nEnt + "s", Integer.toBinaryString(tempEnt.length())).replace(' ', '0');
         }
-        
+
         String codedD = "";
         if(desBuffer.size() - posMatch == desBuffer.size()){ // if the length is the maximum, set to 0
             codedD = String.format("%" + nDes + "s", Integer.toBinaryString(0)).replace(' ', '0');
         }else{
             codedD = String.format("%" + nDes + "s", Integer.toBinaryString(desBuffer.size() - posMatch)).replace(' ', '0');
         }
-        
-        
-        //System.out.println("L: " + codedL + " nEnt: " + nEnt);
-        //System.out.println("D: " + codedD + " nDes: " + nDes);
+        //No coincidencia
         if(posMatch == -1){
             code += tempEnt.substring(0,1) + " ";
             desBuffer.remove(0);
             desBuffer.trimToSize();
-            
-            
+        //En cas de que si, s'afegeix a la codificacio i modifiquem els buffers per continuar
         }else{
             code += codedL + " ";
             code += codedD + " ";
@@ -288,37 +259,29 @@ public class LzDecoder {
             
             
         }  
-        //System.out.println("Dades restants: " + inputData);    
-        //System.out.println("Codificació: " + code);
-        //System.out.println("---------");
-        
+
+        //Comprovacions necesaries per acabar be la part final de la codificacio
+        //Si no tinc mes digits ala seq original...
         if(inputData.isEmpty()){
+            //Buido la part inicial de entBuffer fins la posicio args-midaDesBuffer
             for(int i = 0; i < args.mDes - desBuffer.size(); i++){
                 entBuffer.remove(0);
             }
+            //Per cada element que queda en EntBuffer
             for(String i: entBuffer){
-                System.out.println("puta" + entBuffer.toString());
-                code += i;
+                code += i; //No codifiquem, afegim ala traduccio
             }
-            System.out.println("TEPUTAMERNAIE");
-            System.out.println(entBuffer.toString());
-            System.out.println(desBuffer.toString());
-            System.out.println(inputData);
         }
-               
         return code;
-        
-        
     }
     
+    //Funcio que descodifica una sequencia
     public static String decodeSeq(String toDecode) {
-        //decode 
         System.out.println("- Decoding mode -");
-
+        //Separem per espais
         for(String i: toDecode.split(" ")){
             sequences.add(i);
         }
-
         //init decoded sequence, and fill desBuffer with that data
         String decode = sequences.remove(0);
         for(char i: decode.toCharArray()){
@@ -332,7 +295,7 @@ public class LzDecoder {
         System.out.println("Sequencia descodificada: " + decode);
         return decode;
     }
-
+    //Anem fent substrings
     public static String getStringBuffer(int size, ArrayList<String> buffer){
         String result = "";
         for(int i = 0; i< size; i++){
@@ -341,23 +304,21 @@ public class LzDecoder {
         
         return result;
     }
-    
+    //Funcio que llegeix un fitxer
     public static String readFile(String fileName) throws IOException {
-    BufferedReader br = new BufferedReader(new FileReader(fileName));
-    try {
-        StringBuilder sb = new StringBuilder();
-        String line = br.readLine();
-
-        while (line != null) {
-            sb.append(line);
-            sb.append("\n");
-            line = br.readLine();
-        }
+        BufferedReader br = new BufferedReader(new FileReader(fileName));
+        try {
+            StringBuilder sb = new StringBuilder();
+            String line = br.readLine();
+            while (line != null) {
+                sb.append(line);
+                sb.append("\n");
+                line = br.readLine();
+            }
         return sb.toString();
-    } finally {
-        br.close();
+        } finally {
+            br.close();
+        }
     }
-}
-    
 }
 
