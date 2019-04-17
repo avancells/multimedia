@@ -25,12 +25,12 @@ public class LzDecoder {
      * @param argv the command line arguments
      */
     public static void main(String[] argv) {
+        String[] argt = { "-i", "random", "-mode", "2", "-randSize", "50000"};
         
         Args args = new Args();
-        JCommander.newBuilder().addObject(args).build().parse(argv);
+        JCommander.newBuilder().addObject(args).build().parse(argt);
         Scanner scanner = new Scanner(System.in);
         JCommander jCommander = new JCommander(args, argv);
-        System.out.println(args.help);
         if (args.help == 1) {
             jCommander.usage();
             return;
@@ -74,14 +74,16 @@ public class LzDecoder {
             System.out.println("Parameters used have wrong values. Check mEnt, mDes and the input data size.");
             System.exit(0);
         }
+        
+        preCode(args);
 
         //Descodificar
         if(args.mode == 1){
-            decodeSeq(inputData);
+            decodeSeq(inputData, args);
         //Codificar amb comprovacio 
         } else if(args.mode == 2){
             System.out.println("- Coding mode -");
-            String code = inputData.substring(0, args.mDes) + " ";
+            String code = inputData.substring(0, args.mDes);
             //Mentre tinguem data que processar o elements en el buffer...
             while(!inputData.isEmpty() || entBuffer.size() == args.mEnt){
                 code = searchBuffer(args, code);
@@ -89,7 +91,7 @@ public class LzDecoder {
             System.out.println("Coded result: " + code);
             
             //Procediment que comprova si la sequencia original concorda amb la descodificacio de la codificacio feta per nosaltres
-            String decodedSequence = decodeSeq(code);
+            String decodedSequence = decodeSeq(code, args);
             if (savedInput.equals(decodedSequence)) {
                 System.out.println("CHECK = OK");
             } else {
@@ -103,13 +105,18 @@ public class LzDecoder {
         //Codificar
         } else { 
             System.out.println("- Coding mode -");
-            String code = inputData.substring(0, args.mDes) + " ";
+            String code = inputData.substring(0, args.mDes);
             //Mentre tinguem data que processar o elements en el buffer...
             while(!inputData.isEmpty() || entBuffer.size() == args.mEnt){
                 code = searchBuffer(args, code);
             }
             System.out.println("Coded result: " + code);
         }
+        
+        
+
+        
+        
     }
     
     //Funcio que descodifica una sequencia codificada.
@@ -141,6 +148,7 @@ public class LzDecoder {
             if(value1 == 0){
                 value1 = (int) Math.pow(2, elem1.length());
             }
+            
             int value2 = Integer.parseInt(elem2, 2);
             // if the value is 0, its equivalent to 2^length
             if(value2 == 0){
@@ -248,13 +256,15 @@ public class LzDecoder {
         }
         //No coincidencia
         if(posMatch == -1){
-            code += tempEnt.substring(0,1) + " ";
+            System.out.println("LA PUTA DORUS COLLONS QUE AIXO NO HA DE PASSAR JODER");
+            System.out.println(desBuffer.toString());
+            code += tempEnt.substring(0,1);
             desBuffer.remove(0);
             desBuffer.trimToSize();
         //En cas de que si, s'afegeix a la codificacio i modifiquem els buffers per continuar
         }else{
-            code += codedL + " ";
-            code += codedD + " ";
+            code += codedL;
+            code += codedD;
             if(tempEnt.length() == 1){
                 desBuffer.remove(0);
                 desBuffer.trimToSize();
@@ -285,12 +295,21 @@ public class LzDecoder {
     }
     
     //Funcio que descodifica una sequencia
-    public static String decodeSeq(String toDecode) {
+    public static String decodeSeq(String toDecode, Args args) {
         System.out.println("- Decoding mode -");
+        
+        //separem finestra lliscant
+        sequences.add(toDecode.substring(0, args.mDes));
+        
+        //separem paquets
+        processPack(toDecode.substring(args.mDes), args);
+        
+        
+        /*
         //Separem per espais
         for(String i: toDecode.split(" ")){
             sequences.add(i);
-        }
+        }*/
         //init decoded sequence, and fill desBuffer with that data
         String decode = sequences.remove(0);
         for(char i: decode.toCharArray()){
@@ -301,8 +320,8 @@ public class LzDecoder {
         while(!sequences.isEmpty()){
             decode = decodeString(decode);
         }            
-        System.out.println("Sequencia descodificada: " + decode);
-        return decode;
+        System.out.println("Sequencia descodificada: " + postDecode(args, decode));
+        return postDecode(args, decode);
     }
     //Conversio d'un ArrayList a un String amb els elements d'aquest
     public static String getStringBuffer(int size, ArrayList<String> buffer){
@@ -328,5 +347,88 @@ public class LzDecoder {
         } finally {
             br.close();
         }
+    }
+    
+    public static String preCode(Args args){
+        int zeroCounter = 0;
+        int oneCounter = 0;
+        
+        String tempData = "";
+        
+        for(int i = 0; i < inputData.length(); i++){
+            if(inputData.charAt(i) == '1'){
+                zeroCounter = 0;
+                oneCounter++;
+            }else{
+                oneCounter = 0;
+                zeroCounter++;
+            }
+            
+            tempData += inputData.charAt(i);
+            
+            if(zeroCounter == args.mDes - 2){
+                tempData += "1";
+                zeroCounter = 0;
+            }
+            if(oneCounter == args.mDes - 2){
+                tempData += "0";
+                oneCounter = 0;
+            } 
+        }
+        inputData = tempData;
+        
+        return tempData;
+    }
+    
+    public static String postDecode(Args args, String inputString){
+        int zeroCounter = 0;
+        int oneCounter = 0;
+        boolean skipNext = false;
+        
+        String tempData = "";
+        
+        for(int i = 0; i < inputString.length(); i++){
+            
+            if(inputString.charAt(i) == '1'){
+                zeroCounter = 0;
+                oneCounter++;
+            }else{
+                oneCounter = 0;
+                zeroCounter++;
+            }            
+            
+            tempData += inputString.charAt(i);
+            
+            if(zeroCounter == args.mDes - 2){  
+                i++;
+                zeroCounter = 0;                
+            }else if(oneCounter == args.mDes - 2){  
+                i++;
+                oneCounter = 0;
+            }
+            
+            
+        }
+        
+        return tempData;
+    }
+    
+    public static void processPack(String toDecode, Args args){
+        int nDes = (int) (Math.log(args.mDes)/Math.log(2));
+        int nEnt = (int) (Math.log(args.mEnt)/Math.log(2));
+        while(toDecode.length() >= nDes + nEnt){
+            sequences.add(toDecode.substring(0,nEnt));            
+            toDecode = toDecode.substring(nEnt);
+            
+            sequences.add(toDecode.substring(0,nDes));            
+            toDecode = toDecode.substring(nDes);  
+        }
+        if(toDecode.length() > 0){
+            sequences.add(toDecode);
+        }
+        
+        
+        System.out.println(sequences);
+        
     }
 }
