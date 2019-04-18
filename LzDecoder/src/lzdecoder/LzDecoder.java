@@ -6,8 +6,8 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Scanner;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import static lzdecoder.txtReader.ASCIIbin2string;
+import static lzdecoder.txtReader.cargarTxt;
 
 /**
  *
@@ -25,7 +25,7 @@ public class LzDecoder {
      * @param argv the command line arguments
      */
     public static void main(String[] argv) {
-        String[] argt = { "-i", "random", "-mode", "2", "-randSize", "50000"};
+        String[] argt = { "-i", "quijote_short.txt", "-mode", "3", "-mDes", "8", "-mEnt", "4"};
         
         Args args = new Args();
         JCommander.newBuilder().addObject(args).build().parse(argt);
@@ -59,11 +59,7 @@ public class LzDecoder {
             
         }else{
             System.out.println("Reading from input file...");
-            try {
-                inputData = readFile(args.input);
-            } catch (IOException ex) {
-                Logger.getLogger(LzDecoder.class.getName()).log(Level.SEVERE, null, ex);
-            }
+            inputData = cargarTxt(args.input).toString();
         }
         System.out.println("Sequence: " + inputData);
         savedInput = inputData;
@@ -79,7 +75,9 @@ public class LzDecoder {
 
         //Descodificar
         if(args.mode == 1){
-            decodeSeq(inputData, args);
+            System.out.println("- Deoding mode -");
+            String decodedSequence = decodeSeq(inputData, args);
+            System.out.println("Sequencia descodificada: " + decodedSequence);
         //Codificar amb comprovacio 
         } else if(args.mode == 2){
             System.out.println("- Coding mode -");
@@ -92,6 +90,7 @@ public class LzDecoder {
             
             //Procediment que comprova si la sequencia original concorda amb la descodificacio de la codificacio feta per nosaltres
             String decodedSequence = decodeSeq(code, args);
+            System.out.println("Sequencia descodificada: " + decodedSequence);
             if (savedInput.equals(decodedSequence)) {
                 System.out.println("CHECK = OK");
             } else {
@@ -101,6 +100,52 @@ public class LzDecoder {
             System.out.println("Mida original: " + savedInput.length());
             System.out.println("Mida codificada: " + code.length());
             System.out.printf("Factor de compressió: %.3f:1 \n" , (float) savedInput.length() / (float) code.length());
+            
+            StringBuffer sb = new StringBuffer();
+            
+            sb.append(decodedSequence);
+            System.out.println(ASCIIbin2string(sb));
+        
+        //test mode
+        } else if(args.mode == 3){
+            
+            long codeStart = System.nanoTime();
+            
+            String code = inputData.substring(0, args.mDes);
+            //Mentre tinguem data que processar o elements en el buffer...
+            while(!inputData.isEmpty() || entBuffer.size() == args.mEnt){
+                code = searchBuffer(args, code);
+            }
+            
+            long codeEnd = System.nanoTime();
+            
+            
+            System.out.println("Coding time(seconds): " + (codeEnd - codeStart) / 1000000000.0);
+            
+            
+            long decodeStart = System.nanoTime();
+            //Procediment que comprova si la sequencia original concorda amb la descodificacio de la codificacio feta per nosaltres
+            String decodedSequence = decodeSeq(code, args);
+            long decodeEnd = System.nanoTime();
+            
+            System.out.println("Decoding time(seconds): " + (decodeEnd - decodeStart) / 1000000000.0);
+            
+            
+            
+            if (savedInput.equals(decodedSequence)) {
+                System.out.println("CHECK = OK");
+            } else {
+                System.out.println("CHECK = NOT OK");
+            }
+            
+            System.out.println("Mida original (bits): " + savedInput.length());
+            System.out.println("Mida codificada (bits): " + code.length());
+            System.out.printf("Factor de compressió: %.3f:1 \n" , (float) savedInput.length() / (float) code.length());
+            
+            System.out.println("Printing recovered text (first 100 chars): ");
+            StringBuffer sb = new StringBuffer();            
+            sb.append(decodedSequence);
+            System.out.println("    " + ASCIIbin2string(sb).substring(0, 100) + "...");
             
         //Codificar
         } else { 
@@ -186,6 +231,7 @@ public class LzDecoder {
         //Res mes a codificar
         if(inputData.isEmpty()){
             entBuffer.clear();
+            
             return code;
         }
         //Nomes parara quan la mida del buffer deslizante i el d'entrada siguin diferents respecte els arguments d'entrada
@@ -204,10 +250,12 @@ public class LzDecoder {
                     entBuffer.trimToSize();
                     if(desBuffer.size() == args.mDes){
                         int entSize = entBuffer.size();
+                        System.out.println(entBuffer.toString());
                         //Treiem els elements del entBuffer que no es codifiquen i s'afegeixen a la codificacio. Retornem
                         for(int i = 0; i < entSize; i++){
                             code += entBuffer.remove(0);
                         }
+                        
                         return code;
                     }
                 } 
@@ -256,8 +304,6 @@ public class LzDecoder {
         }
         //No coincidencia
         if(posMatch == -1){
-            System.out.println("LA PUTA DORUS COLLONS QUE AIXO NO HA DE PASSAR JODER");
-            System.out.println(desBuffer.toString());
             code += tempEnt.substring(0,1);
             desBuffer.remove(0);
             desBuffer.trimToSize();
@@ -296,7 +342,7 @@ public class LzDecoder {
     
     //Funcio que descodifica una sequencia
     public static String decodeSeq(String toDecode, Args args) {
-        System.out.println("- Decoding mode -");
+        
         
         //separem finestra lliscant
         sequences.add(toDecode.substring(0, args.mDes));
@@ -320,7 +366,6 @@ public class LzDecoder {
         while(!sequences.isEmpty()){
             decode = decodeString(decode);
         }            
-        System.out.println("Sequencia descodificada: " + postDecode(args, decode));
         return postDecode(args, decode);
     }
     //Conversio d'un ArrayList a un String amb els elements d'aquest
@@ -416,8 +461,9 @@ public class LzDecoder {
     public static void processPack(String toDecode, Args args){
         int nDes = (int) (Math.log(args.mDes)/Math.log(2));
         int nEnt = (int) (Math.log(args.mEnt)/Math.log(2));
-        while(toDecode.length() >= nDes + nEnt){
-            sequences.add(toDecode.substring(0,nEnt));            
+        
+        while(toDecode.length() > args.mEnt){
+            sequences.add(toDecode.substring(0,nEnt));
             toDecode = toDecode.substring(nEnt);
             
             sequences.add(toDecode.substring(0,nDes));            
@@ -427,8 +473,6 @@ public class LzDecoder {
             sequences.add(toDecode);
         }
         
-        
-        System.out.println(sequences);
-        
+
     }
 }
