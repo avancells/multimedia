@@ -37,6 +37,6 @@ public class Args {
   @Parameter(names = "-help", description = "Prompts the help.")
     int help = 0;
 
-  @Parameter(names = "-mode", description = "Use 0 to enable coding, 1 to enable decoding, 2 to enable checking mode(code-decode-compare). Default is coding mode.")
+  @Parameter(names = "-mode", description = "Use 0 to enable coding, 1 to enable decoding, 2 to enable checking mode(code-decode-compare), 3 to enable testing mode(timed coding and decoding). Default is coding mode.")
    int mode = 0;
 }

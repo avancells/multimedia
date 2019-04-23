@@ -28,7 +28,7 @@ public class LzDecoder {
         String[] argt = { "-i", "quijote_short.txt", "-mode", "3", "-mDes", "8", "-mEnt", "4"};
         
         Args args = new Args();
-        JCommander.newBuilder().addObject(args).build().parse(argt);
+        JCommander.newBuilder().addObject(args).build().parse(argv);
         Scanner scanner = new Scanner(System.in);
         JCommander jCommander = new JCommander(args, argv);
         if (args.help == 1) {
@@ -250,7 +250,6 @@ public class LzDecoder {
                     entBuffer.trimToSize();
                     if(desBuffer.size() == args.mDes){
                         int entSize = entBuffer.size();
-                        System.out.println(entBuffer.toString());
                         //Treiem els elements del entBuffer que no es codifiquen i s'afegeixen a la codificacio. Retornem
                         for(int i = 0; i < entSize; i++){
                             code += entBuffer.remove(0);
