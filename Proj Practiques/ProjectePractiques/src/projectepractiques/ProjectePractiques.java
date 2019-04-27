@@ -3,6 +3,7 @@ package projectepractiques;
 
 import com.beust.jcommander.JCommander;
 import java.awt.BorderLayout;
+import java.awt.Dimension;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.awt.image.WritableRaster;
@@ -13,8 +14,12 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
@@ -29,12 +34,14 @@ import javax.swing.JLabel;
  * @author Blai Ras i Arnau Vancells
  */
 public class ProjectePractiques {
-    public static ArrayList<String> nameImage;
+    public static ArrayList<BufferedImage> images = new ArrayList<>();
+    public static ArrayList<String> imageNames = new ArrayList<>();
+    public static Map<String, BufferedImage> imageDict = new HashMap<>();
 
     /**
      * @param args the command line arguments
      */
-    public static void main(String[] argv) throws FileNotFoundException, IOException {
+    public static void main(String[] argv) {
         Args args = new Args();
         JCommander.newBuilder().addObject(args).build().parse(argv);
         Scanner scanner = new Scanner(System.in);
@@ -44,14 +51,24 @@ public class ProjectePractiques {
             return;
         }
         
-        //readImage();
-        readZip();
+        try {
+            //readImage();
+            readZip("zips/Cubo.zip");
+        } catch (IOException ex) {
+            Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        try {
+            playZip(args.fps);
+        } catch (InterruptedException ex) {
+            Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        System.exit(0);
     }
     
     
-    public static void readImage() throws FileNotFoundException, IOException {
+    public static void readImage(String imagePath) throws FileNotFoundException, IOException {
         BufferedImage buffer;
-        InputStream is = new BufferedInputStream(new FileInputStream("Cubo03.png"));
+        InputStream is = new BufferedInputStream(new FileInputStream(imagePath));
         buffer = ImageIO.read(is);
         showImage(buffer);
         subImage(buffer);
@@ -63,11 +80,6 @@ public class ProjectePractiques {
         frame.getContentPane().add(label, BorderLayout.CENTER);
         frame.pack();
         frame.setVisible(true);
-        try {
-            getPixelColor(image);
-        } catch (IOException ex) {
-            Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);
-        }
     }
     
     public static void getPixelColor(BufferedImage image) throws FileNotFoundException, IOException {
@@ -87,27 +99,46 @@ public class ProjectePractiques {
         showImage(subImage);
     }
     
-    public static void readZip() throws IOException {
-        ZipFile zip = new ZipFile(new File("cubo.zip"));
-        
+    public static void readZip(String zipPath) throws IOException {
+
+        ZipFile zip = new ZipFile(new File(zipPath));
         
         Enumeration<? extends ZipEntry> entries = zip.entries();
         
-
+        
         while(entries.hasMoreElements()) {
             
             ZipEntry zipEntry = entries.nextElement();
-            System.out.println(zipEntry.getName());
+            InputStream entryStream = zip.getInputStream(zipEntry);
+            BufferedImage image = ImageIO.read(entryStream);
+            imageNames.add(zipEntry.getName());            
+            //images.add(image); 
             
+            imageDict.put(zipEntry.getName(), image);
             
-            
-            
-//            while((line = bufferedReader.readLine()) != null){
-//                System.out.println(line);
-//            }
-           
         }
         zip.close();
+        Collections.sort(imageNames);
+        
+    }
+    
+    public static void playZip(int fps) throws InterruptedException {
+        JFrame frame = new JFrame();
+        frame.setPreferredSize(new Dimension(imageDict.get(imageNames.get(0)).getWidth() + 50, imageDict.get(imageNames.get(0)).getHeight() + 50));
+        JLabel label = new JLabel();
+        label.setHorizontalAlignment(JLabel.CENTER);
+        
+        frame.getContentPane().add(label, BorderLayout.CENTER);
+        frame.pack();
+        frame.setVisible(true);
+        
+        System.out.println("Displaying images at: " + fps + " fps");
+        for(int i= 0; i < imageNames.size(); i++){
+            
+            label.setIcon(new ImageIcon(imageDict.get(imageNames.get(i))));
+            TimeUnit.MILLISECONDS.sleep(1000 / fps);
+        }
+
     }
         
         
