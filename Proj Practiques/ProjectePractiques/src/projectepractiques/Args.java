@@ -37,7 +37,7 @@ public class Args {
 
 
     @Parameter(names = "--binaritzation", description = "filtre de binarització utilitzant el valor llindar indicat")
-    int bin = 0;
+    int bin = 155;
 
     @Parameter(names = "--negative", description = " aplicació d’un filtre negatiu sobre la imatge. ")
     int negative = 0;
