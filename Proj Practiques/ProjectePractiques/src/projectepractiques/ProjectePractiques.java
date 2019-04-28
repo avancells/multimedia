@@ -54,36 +54,72 @@ public class ProjectePractiques {
             return;
         }
         
-        try {
-            //readImage();
-            readZip("zips/Cubo.zip");
-        } catch (IOException ex) {
-            Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);
+        if (args.input == "") {
+            System.out.println("Input cannot be null");
+            System.exit(0);
         }
+        
+        if (args.encode == 1) {
+            try {
+                System.out.println("Reading zip file...");
+                readZip(args.input);
+            } catch (IOException ex) {
+                Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+            
+            for (int i = 0; i < imageNames.size(); i++) {
+                if (args.average > 0) {
+                    imageDict.put(imageNames.get(i), average(imageDict.get(imageNames.get(i)),args.average));
+                }
+                if (args.bin > -1) {
+                    imageDict.put(imageNames.get(i), binaritzation(imageDict.get(imageNames.get(i)),args.bin));
+                }
+                if (args.negative == 1){
+                    imageDict.put(imageNames.get(i), negative(imageDict.get(imageNames.get(i))));
+                }
+            }
+
+            try {
+                playZip(args.fps);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            
+            try {
+                System.out.println("Saving images to zip...");
+                saveToZip();
+            } catch (IOException ex) {
+                Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            
+            
+            System.exit(0);
+            
+        }
+//        
+        
+        //showImage(average(imageDict.get(imageNames.get(0)),5));
+        
+
+
+//        imagesToZip.add(negative(imageDict.get(imageNames.get(0))));
+//        imagesToZip.add(negative(imageDict.get(imageNames.get(5))));
+//        
 //        try {
-//            playZip(args.fps);
-//        } catch (InterruptedException ex) {
+//            saveToZip(imagesToZip);
+//        } catch (IOException ex) {
 //            Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);
 //        }
-        //negative(imageDict.get(imageNames.get(0)));
-        imagesToZip.add(negative(imageDict.get(imageNames.get(0))));
-        imagesToZip.add(negative(imageDict.get(imageNames.get(5))));
-        
-        try {
-            saveToZip(imagesToZip);
-        } catch (IOException ex) {
-            Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);
-        }
         
     }
     
     
-    public static void readImage(String imagePath) throws FileNotFoundException, IOException {
+    public static BufferedImage readImage(String imagePath) throws FileNotFoundException, IOException {
         BufferedImage buffer;
         InputStream is = new BufferedInputStream(new FileInputStream(imagePath));
         buffer = ImageIO.read(is);
-        showImage(buffer);
-        subImage(buffer);
+        return buffer;
     }
     
     public static void showImage(BufferedImage image) {
@@ -95,6 +131,7 @@ public class ProjectePractiques {
     }
     
     public static int[] getPixelColor(BufferedImage image,int x,int y) {
+       
         int colors[] = new int[3];
         int clr=  image.getRGB(x,y); 
         int  red   = (clr & 0x00ff0000) >> 16;
@@ -129,10 +166,8 @@ public class ProjectePractiques {
             InputStream entryStream = zip.getInputStream(zipEntry);
             BufferedImage image = ImageIO.read(entryStream);
             imageNames.add(zipEntry.getName());            
-
-            
             imageDict.put(zipEntry.getName(), image);
-            
+
         }
         zip.close();
         Collections.sort(imageNames);
@@ -204,14 +239,52 @@ public class ProjectePractiques {
         return subImage;
     }
     
-    public static void saveToZip(ArrayList<BufferedImage> images) throws FileNotFoundException, IOException {
+    public static BufferedImage average(BufferedImage image, int value) {
+        int[] colors;
+        int[] meanColor = new int[3];
+        double meanRed, meanGreen, meanBlue;
+        
+        WritableRaster bitmap = (WritableRaster) image.getData();
+        WritableRaster tesela = bitmap.createWritableChild(image.getMinX(), image.getMinY(), image.getWidth(), image.getHeight(), 0,0, null);
+        
+        for (int x = 0; x < image.getWidth()-1; x++){
+            for (int y = 0; y < image.getHeight()-1; y++) {
+                int red = 0, green=0, blue = 0;
+                for (int f =-value; f <= value; f++) {
+                    for (int k = -value; k <= value; k++) {
+                        if (y+(f)>=0 && x+(k)>=0 && y+(f) < image.getHeight() && x+(k)<image.getWidth()) {
+                            colors = getPixelColor(image,x+k,y+f);
+                            red += colors[0];
+                            green += colors[1];
+                            blue += colors[2];
+                        }
+                    }
+                }
+                int distance = (value - (-value)+1)*(value - (-value)+1);
+                meanRed = red / distance;
+                meanColor[0] = (int) meanRed;
+                meanGreen = green /  distance;
+                meanColor[1] = (int) meanGreen;
+                meanBlue = blue /  distance;
+                meanColor[2] = (int) meanBlue;
+                bitmap.setPixel(x,y,meanColor);
+            }
+        }
+        BufferedImage subImage = new BufferedImage(image.getColorModel(),tesela,image.isAlphaPremultiplied(),null);
+        return subImage;
+    }
+    
+    public static void saveToZip() throws FileNotFoundException, IOException {
         FileOutputStream fos = new FileOutputStream("savedImages.zip");
         ZipOutputStream zipOS = new ZipOutputStream(fos);
-        
-        for (int i =0; i< images.size(); i++) {
-            ImageIO.write(images.get(i),"jpg",new File("image_"+Integer.toString(i)+".jpg"));
-            createFileToZip(images.get(i),i,zipOS);
+        for (int i =0; i< imageNames.size(); i++) {
+            File tempImage = new File("image_"+Integer.toString(i)+".jpg");
+            ImageIO.write(imageDict.get(imageNames.get(i)),"jpg",tempImage);
+            createFileToZip(imageDict.get(imageNames.get(i)),i,zipOS);
+            tempImage.delete();
         }
+        zipOS.finish(); // good practice
+        zipOS.close();
     }
     
     public static void createFileToZip(BufferedImage image,int name,ZipOutputStream zipOS) throws FileNotFoundException, IOException {
@@ -226,6 +299,7 @@ public class ProjectePractiques {
         }
         zipOS.closeEntry();
         fis.close();
+        
     }
 
 
