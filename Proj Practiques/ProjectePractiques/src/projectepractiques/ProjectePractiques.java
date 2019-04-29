@@ -80,18 +80,15 @@ public class ProjectePractiques {
                     imageDict.put(imageNames.get(i), negative(imageDict.get(imageNames.get(i))));
                 }
             }
-
-//            try {
-//                playZip(args.fps);
-//            } catch (InterruptedException ex) {
-//                Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);
-//            }
             
+            // Start videoplayer thread
             VideoPlayer vp = new VideoPlayer(args.fps, imageNames, new HashMap<>(imageDict));
             Thread t = new Thread(vp);
             System.out.println("Starting videoplayer thread...");
             t.start();
             
+            
+            // Save images into zip in JPEG format
             try {
                 System.out.println("Saving images to zip...");
                 saveToZip();

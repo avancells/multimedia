@@ -48,12 +48,12 @@ public class VideoPlayer extends JFrame implements Runnable {
         this.setVisible(true);
         
         play();
-        
+        this.dispose();
     }
     
     public void play(){
         System.out.println("Displaying images at: " + fps + " fps");
-        for(int i= 0; i < imageNames.size(); i++){
+        for(int i= 0; i < imageNames.size(); i++){  
             label.setIcon(new ImageIcon(imageDict.get(imageNames.get(i))));
             try {
                 TimeUnit.MILLISECONDS.sleep(1000 / fps);
