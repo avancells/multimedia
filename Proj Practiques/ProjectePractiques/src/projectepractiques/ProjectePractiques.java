@@ -4,6 +4,7 @@ package projectepractiques;
 import com.beust.jcommander.JCommander;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
+import java.awt.EventQueue;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.awt.image.WritableRaster;
@@ -80,11 +81,16 @@ public class ProjectePractiques {
                 }
             }
 
-            try {
-                playZip(args.fps);
-            } catch (InterruptedException ex) {
-                Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);
-            }
+//            try {
+//                playZip(args.fps);
+//            } catch (InterruptedException ex) {
+//                Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);
+//            }
+            
+            VideoPlayer vp = new VideoPlayer(args.fps, imageNames, new HashMap<>(imageDict));
+            Thread t = new Thread(vp);
+            System.out.println("Starting videoplayer thread...");
+            t.start();
             
             try {
                 System.out.println("Saving images to zip...");
@@ -94,7 +100,8 @@ public class ProjectePractiques {
             }
             
             
-            System.exit(0);
+            
+            //System.exit(0);
             
         }
 //        
