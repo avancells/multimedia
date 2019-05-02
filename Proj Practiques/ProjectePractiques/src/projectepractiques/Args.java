@@ -22,7 +22,7 @@ public class Args {
 
     @Parameter(names = { "--output", "-o" }, description = " Nom del fitxer en format propi amb la seqüència d’imatges\n" +
 "de sortida i la informació necessària per la descodificació.")
-    String output = "console";
+    String output = "saved_images.zip";
 
     @Parameter(names = { "-e", "--encode" }, description = "Argument que indica que s’haurà d’aplicar la codificació sobre el conjunt d’imatges\n" +
 "d’input i guardar el resultat al lloc indicat per output. ")

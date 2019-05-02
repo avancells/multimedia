@@ -50,17 +50,23 @@ public class ProjectePractiques {
         JCommander.newBuilder().addObject(args).build().parse(argv);
         Scanner scanner = new Scanner(System.in);
         JCommander jCommander = new JCommander(args, argv);
+        
+        
         if (args.help == 1) {
+            // Show jcommander help
             jCommander.usage();
             return;
         }
         
+        // Input arg can't be null, it is mandatory
         if (args.input == "") {
             System.out.println("Input cannot be null");
             System.exit(0);
         }
         
+        // Encoding mode
         if (args.encode == 1) {
+            System.out.println("Encoding mode (work in progress)");
             try {
                 System.out.println("Reading zip file...");
                 readZip(args.input);
@@ -68,14 +74,20 @@ public class ProjectePractiques {
                 Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);
             }
 
-            
+            // for each image read
             for (int i = 0; i < imageNames.size(); i++) {
+                
+                // apply averaging
                 if (args.average > 0) {
                     imageDict.put(imageNames.get(i), average(imageDict.get(imageNames.get(i)),args.average));
                 }
+                
+                // apply binaritzation
                 if (args.bin > -1) {
                     imageDict.put(imageNames.get(i), binaritzation(imageDict.get(imageNames.get(i)),args.bin));
                 }
+                
+                // apply negative filter
                 if (args.negative == 1){
                     imageDict.put(imageNames.get(i), negative(imageDict.get(imageNames.get(i))));
                 }
@@ -88,37 +100,23 @@ public class ProjectePractiques {
             t.start();
             
             
-            // Save images into zip in JPEG format
+            // Save images into zip in JPEG format to the specified path
             try {
-                System.out.println("Saving images to zip...");
-                saveToZip();
+                System.out.println("Saving images to: " + args.output);
+                saveToZip(args.output);
             } catch (IOException ex) {
                 Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);
             }
-            
-            
-            
-            //System.exit(0);
+
             
         }
-//        
-        
-        //showImage(average(imageDict.get(imageNames.get(0)),5));
-        
-
-
-//        imagesToZip.add(negative(imageDict.get(imageNames.get(0))));
-//        imagesToZip.add(negative(imageDict.get(imageNames.get(5))));
-//        
-//        try {
-//            saveToZip(imagesToZip);
-//        } catch (IOException ex) {
-//            Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);
-//        }
+        if(args.decode == 1){
+            System.out.println("Decoding mode (Not implemented yet)");
+        }
         
     }
     
-    
+    // Read image from path, and load it into a BufferedImage object
     public static BufferedImage readImage(String imagePath) throws FileNotFoundException, IOException {
         BufferedImage buffer;
         InputStream is = new BufferedInputStream(new FileInputStream(imagePath));
@@ -126,6 +124,8 @@ public class ProjectePractiques {
         return buffer;
     }
     
+    //Unused
+    // Creates a JFrame with a label, containing the given image
     public static void showImage(BufferedImage image) {
         JFrame frame = new JFrame();
         JLabel label = new JLabel(new ImageIcon(image));
@@ -134,6 +134,7 @@ public class ProjectePractiques {
         frame.setVisible(true);
     }
     
+    // Returns the color of a pixel from a BufferedImage, given x and y
     public static int[] getPixelColor(BufferedImage image,int x,int y) {
        
         int colors[] = new int[3];
@@ -150,6 +151,8 @@ public class ProjectePractiques {
         return colors;
     }
     
+    //Unused
+    // Testing function used to trim the image using a WritableRaster
     public static void subImage(BufferedImage image) {
         WritableRaster bitmap = (WritableRaster) image.getData();
         WritableRaster tesela = bitmap.createWritableChild(image.getMinX(), image.getMinY(), 100, 50, 0,0, null);
@@ -157,13 +160,15 @@ public class ProjectePractiques {
         showImage(subImage);
     }
     
+    // Reads a zip file and loads the images into a HashMap, plus ordering them by name
     public static void readZip(String zipPath) throws IOException {
 
+        // Load zip and its entries
         ZipFile zip = new ZipFile(new File(zipPath));
         
         Enumeration<? extends ZipEntry> entries = zip.entries();
         
-        
+        // Read every entry and load it to the HashMap
         while(entries.hasMoreElements()) {
             
             ZipEntry zipEntry = entries.nextElement();
@@ -174,10 +179,14 @@ public class ProjectePractiques {
 
         }
         zip.close();
-        Collections.sort(imageNames);
+        // Sort the image names list
+        Collections.sort(imageNames); 
         
     }
     
+    //Unused (moved to VideoPlayer.java)
+    // Creates a new JFrame containing an image, and cicles through the list of loaded images in order to play them
+    // in a sequence, while controlling the FPS its played at
     public static void playZip(int fps) throws InterruptedException {
         JFrame frame = new JFrame();
         frame.setPreferredSize(new Dimension(imageDict.get(imageNames.get(0)).getWidth() + 50, imageDict.get(imageNames.get(0)).getHeight() + 50));
@@ -278,8 +287,8 @@ public class ProjectePractiques {
         return subImage;
     }
     
-    public static void saveToZip() throws FileNotFoundException, IOException {
-        FileOutputStream fos = new FileOutputStream("savedImages.zip");
+    public static void saveToZip(String path) throws FileNotFoundException, IOException {
+        FileOutputStream fos = new FileOutputStream(path);
         ZipOutputStream zipOS = new ZipOutputStream(fos);
         for (int i =0; i< imageNames.size(); i++) {
             File tempImage = new File("image_"+Integer.toString(i)+".jpg");
