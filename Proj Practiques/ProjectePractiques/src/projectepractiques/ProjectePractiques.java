@@ -253,7 +253,14 @@ public class ProjectePractiques {
                 colors = getPixelColor(image,x,y);
                 for (int i = 0; i < 3; i++) {
                     //Negative filter means doing 1 - original pixel
-                    negat[i] = 1-colors[i];
+                    if(colors[i] == 0){
+                        negat[i] = -1;
+                    }else{
+                        negat[i] = 1-colors[i];
+                    }
+                        
+                    
+                    
                 }
                 bitmap.setPixel(x,y,negat);
             }
