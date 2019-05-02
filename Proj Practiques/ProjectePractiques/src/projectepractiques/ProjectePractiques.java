@@ -94,10 +94,13 @@ public class ProjectePractiques {
             }
             
             // Start videoplayer thread
-            VideoPlayer vp = new VideoPlayer(args.fps, imageNames, new HashMap<>(imageDict));
-            Thread t = new Thread(vp);
-            System.out.println("Starting videoplayer thread...");
-            t.start();
+            if(args.batch == 0){
+                VideoPlayer vp = new VideoPlayer(args.fps, imageNames, new HashMap<>(imageDict));
+                Thread t = new Thread(vp);
+                System.out.println("Starting videoplayer thread...");
+                t.start();
+            }
+            
             
             
             // Save images into zip in JPEG format to the specified path

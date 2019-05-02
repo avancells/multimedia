@@ -25,21 +25,21 @@ public class Args {
     String output = "saved_images.zip";
 
     @Parameter(names = { "-e", "--encode" }, description = "Argument que indica que s’haurà d’aplicar la codificació sobre el conjunt d’imatges\n" +
-"d’input i guardar el resultat al lloc indicat per output. ")
+"d’input i guardar el resultat al lloc indicat per output. Si és 1 estarà activat, si és 0 desactivat.")
     Integer encode = 0;
 
     @Parameter(names = { "-d", "--decode" }, description = "Argument que indica que s’haurà d’aplicar la descodificació sobre el conjunt\n" +
-"d’imatges d’input provinents d’un fitxer en format propi")
+"d’imatges d’input provinents d’un fitxer en format propi.  Si és 1 estarà activat, si és 0 desactivat.")
     Integer decode = 0;
 
     @Parameter(names = {"--fps"}, description = "nombre d’imatges per segon amb les quals és reproduirà el vídeo.") 
     Integer fps = 25;
 
 
-    @Parameter(names = "--binaritzation", description = "filtre de binarització utilitzant el valor llindar indicat")
+    @Parameter(names = "--binaritzation", description = "filtre de binarització utilitzant el valor llindar indicat. S'espera un valor positiu.")
     int bin = -1;
 
-    @Parameter(names = "--negative", description = " aplicació d’un filtre negatiu sobre la imatge. ")
+    @Parameter(names = "--negative", description = " aplicació d’un filtre negatiu sobre la imatge.  Si és 1 estarà activat, si és 0 desactivat.")
     int negative = 0;
     
     @Parameter(names = "--averaging", description = "aplicació d’un filtre de promig en zones de value x value.")
@@ -55,10 +55,10 @@ public class Args {
 "coincidents.")
     int quality = 0;
     
-    @Parameter(names = "--batch", description = "No Window")
+    @Parameter(names = "--batch", description = "Mode batch.  Si és 1 no es reproduïrà el video, si és 0 es reproduïrà.")
     int batch = 0;
     
-    @Parameter(names = "-help", description = "Prompts the help.")
+    @Parameter(names = "-help", description = "Mostra la descripció de les comandes.")
     int help = 0;
 
     
