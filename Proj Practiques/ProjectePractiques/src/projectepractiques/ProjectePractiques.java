@@ -205,8 +205,9 @@ public class ProjectePractiques {
         }
 
     }
-    
+    //Applies bin filter with a treshold in a BufferedImage
     public static BufferedImage binaritzation(BufferedImage image, int thrs) {
+        //3-position array where we store R,G,B values of every pixel
         int[] colors;
         int[] black = new int[3];
         int[] white = new int[3];
@@ -214,15 +215,17 @@ public class ProjectePractiques {
             black[i] = 0;
             white[i] = 255;
         }
+        //We create a tesela so we can modify the image pixels
         WritableRaster bitmap = (WritableRaster) image.getData();
         WritableRaster tesela = bitmap.createWritableChild(image.getMinX(), image.getMinY(), image.getWidth(), image.getHeight(), 0,0, null);
+        //We compute the mean of every pixel so we can decide if its black or white
         double mean;
+        //Image iteration pixel by pixel
         for (int x = 0; x < image.getWidth(); x++){
             for (int y = 0; y < image.getHeight(); y++) {
                 colors = getPixelColor(image,x,y);
                 mean = colors[0] + colors[1] + colors[2];
                 mean = mean/3;
-                
                 if (mean <= thrs) {
                     bitmap.setPixel(x,y,black);
                 } else {
@@ -230,42 +233,57 @@ public class ProjectePractiques {
                 }
             }
         }
+        //Create the binarized image and return it
         BufferedImage subImage = new BufferedImage(image.getColorModel(),tesela,image.isAlphaPremultiplied(),null);
         return subImage;
     }
     
+    //Applies negative filter in a BufferedImage
     public static BufferedImage negative(BufferedImage image) {
+        //3-position array where we store R,G,B values of every pixel
         int[] colors;
+        //3-position array where we will store the new negative R,B,G values 
         int[] negat = new int[3];
+        //Create a tessela form the original image so we can modify its pixels
         WritableRaster bitmap = (WritableRaster) image.getData();
         WritableRaster tesela = bitmap.createWritableChild(image.getMinX(), image.getMinY(), image.getWidth(), image.getHeight(), 0,0, null);
+        //Image iteration
         for (int x = 0; x < image.getWidth(); x++){
             for (int y = 0; y < image.getHeight(); y++) {
                 colors = getPixelColor(image,x,y);
                 for (int i = 0; i < 3; i++) {
+                    //Negative filter means doing 1 - original pixel
                     negat[i] = 1-colors[i];
                 }
                 bitmap.setPixel(x,y,negat);
             }
         }
+        //Create the negative image and return it
         BufferedImage subImage = new BufferedImage(image.getColorModel(),tesela,image.isAlphaPremultiplied(),null);
         return subImage;
     }
     
+    //Funcion that applies averaging filter in a BufferedImage, taking a window with 'value' size
     public static BufferedImage average(BufferedImage image, int value) {
+        //3-position array where we store R,G,B values of every pixel
         int[] colors;
+        //3-position array where we will store the mean value of every pixel of every channel
         int[] meanColor = new int[3];
+        //mean values for every channel
         double meanRed, meanGreen, meanBlue;
-        
+        //Create a tessela form the original image so we can modify its pixels
         WritableRaster bitmap = (WritableRaster) image.getData();
         WritableRaster tesela = bitmap.createWritableChild(image.getMinX(), image.getMinY(), image.getWidth(), image.getHeight(), 0,0, null);
-        
+        //Image iteration
         for (int x = 0; x < image.getWidth()-1; x++){
             for (int y = 0; y < image.getHeight()-1; y++) {
                 int red = 0, green=0, blue = 0;
+                //Window iteration
                 for (int f =-value; f <= value; f++) {
                     for (int k = -value; k <= value; k++) {
+                        //Get every window coordinate, but first check if they actually exist (not out of bounds)
                         if (y+(f)>=0 && x+(k)>=0 && y+(f) < image.getHeight() && x+(k)<image.getWidth()) {
+                            //Temporal store of the value of every channel so then we can compute the mean
                             colors = getPixelColor(image,x+k,y+f);
                             red += colors[0];
                             green += colors[1];
@@ -273,7 +291,9 @@ public class ProjectePractiques {
                         }
                     }
                 }
+                //To compute the mean of every color we have to compute the 'distance'+1
                 int distance = (value - (-value)+1)*(value - (-value)+1);
+                //For every channel, compute the new pixel value
                 meanRed = red / distance;
                 meanColor[0] = (int) meanRed;
                 meanGreen = green /  distance;
@@ -283,27 +303,38 @@ public class ProjectePractiques {
                 bitmap.setPixel(x,y,meanColor);
             }
         }
+        //Create the averaged image and return it
         BufferedImage subImage = new BufferedImage(image.getColorModel(),tesela,image.isAlphaPremultiplied(),null);
         return subImage;
     }
     
+    //Function that stores our image array into a ZIP File
     public static void saveToZip(String path) throws FileNotFoundException, IOException {
+        //File and Zip Outoput Streams 
         FileOutputStream fos = new FileOutputStream(path);
         ZipOutputStream zipOS = new ZipOutputStream(fos);
+        //For every image, we create a temporally jpeg file
+        //Then, with the createFileToZip function, we include it to the output zip file
+        //Finally, we delete the jpeg image
         for (int i =0; i< imageNames.size(); i++) {
             File tempImage = new File("image_"+Integer.toString(i)+".jpg");
             ImageIO.write(imageDict.get(imageNames.get(i)),"jpg",tempImage);
             createFileToZip(imageDict.get(imageNames.get(i)),i,zipOS);
             tempImage.delete();
         }
-        zipOS.finish(); // good practice
+        zipOS.finish(); //Good practice!
         zipOS.close();
     }
-    
+
+    //Function that stores into a zip file the passed image
     public static void createFileToZip(BufferedImage image,int name,ZipOutputStream zipOS) throws FileNotFoundException, IOException {
+        //Create the jpeg image
         File f = new File("image_"+Integer.toString(name)+".jpg");
+        //Create the inputstream
         FileInputStream fis = new FileInputStream(f);
+        //Create a zipentry for the file we are gonna include to the zip
         ZipEntry zipEntry = new ZipEntry("image_"+Integer.toString(name)+".jpg");
+        //Store the image into the zip as an array of bytes
         zipOS.putNextEntry(zipEntry);
         byte[] bytes = new byte[1024];
         int length;
@@ -312,13 +343,5 @@ public class ProjectePractiques {
         }
         zipOS.closeEntry();
         fis.close();
-        
     }
-
-
-    
-    
-        
-        
-
 }
