@@ -1,0 +1,22 @@
+java -jar jar/ProjectePractiques.jar -i "zips/Cubo.zip"  -e 1 
+
+java -jar jar/ProjectePractiques.jar -i "zips/Cubo.zip"  -e 1 --fps 10
+
+java -jar jar/ProjectePractiques.jar -i "zips/Cubo.zip"  -e 1 --batch 1
+
+java -jar jar/ProjectePractiques.jar -i "zips/Cubo.zip"  -e 1 --averaging 3
+
+java -jar jar/ProjectePractiques.jar -i "zips/Cubo.zip"  -e 1 --negative 1
+
+java -jar jar/ProjectePractiques.jar -i "zips/Cubo.zip"  -e 1 --binaritzation 70
+
+java -jar jar/ProjectePractiques.jar -i "zips/Cubo.zip"  -e 1 --averaging 3 --negative 1
+
+java -jar jar/ProjectePractiques.jar -i "zips/Cubo.zip"  -e 1 --binaritzation 70 --negative 1
+
+
+
+
+
+
+ 
