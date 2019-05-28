@@ -34,8 +34,7 @@ public class Args {
 
     @Parameter(names = {"--fps"}, description = "nombre d’imatges per segon amb les quals és reproduirà el vídeo.") 
     Integer fps = 25;
-
-
+    
     @Parameter(names = "--binaritzation", description = "filtre de binarització utilitzant el valor llindar indicat. S'espera un valor positiu.")
     int bin = -1;
 
@@ -55,12 +54,13 @@ public class Args {
 "coincidents.")
     int quality = 0;
     
+    @Parameter(names = "--gop", description = "Indica el numero de Group of Picture a usar")
+    int gop = 0;
+    
     @Parameter(names = "--batch", description = "Mode batch.  Si és 1 no es reproduïrà el video, si és 0 es reproduïrà.")
     int batch = 0;
     
     @Parameter(names = "-help", description = "Mostra la descripció de les comandes.")
     int help = 0;
 
-    
-    
 }

@@ -4,8 +4,6 @@ package projectepractiques;
 import com.beust.jcommander.JCommander;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
-import java.awt.EventQueue;
-import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.awt.image.WritableRaster;
 import java.io.BufferedInputStream;
@@ -41,6 +39,7 @@ public class ProjectePractiques {
     public static ArrayList<String> imageNames = new ArrayList<>();
     public static ArrayList<BufferedImage> imagesToZip = new ArrayList<>();
     public static Map<String, BufferedImage> imageDict = new HashMap<>();
+    public static ArrayList<Tile> allTiles = new ArrayList<>();
 
     /**
      * @param args the command line arguments
@@ -48,7 +47,6 @@ public class ProjectePractiques {
     public static void main(String[] argv) {
         Args args = new Args();
         JCommander.newBuilder().addObject(args).build().parse(argv);
-        Scanner scanner = new Scanner(System.in);
         JCommander jCommander = new JCommander(args, argv);
         
         
@@ -110,6 +108,8 @@ public class ProjectePractiques {
             } catch (IOException ex) {
                 Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);
             }
+            
+            startEncode();
 
             
         }
@@ -261,9 +261,6 @@ public class ProjectePractiques {
                     }else{
                         negat[i] = 1-colors[i];
                     }
-                        
-                    
-                    
                 }
                 bitmap.setPixel(x,y,negat);
             }
@@ -353,5 +350,119 @@ public class ProjectePractiques {
         }
         zipOS.closeEntry();
         fis.close();
+    }
+    
+    public static void startEncode(int nTiles, int gop, int thrs) {
+        BufferedImage frameI;
+        
+        for (String imgName: imageNames) {
+            for (int i = 0; i < gop; i++) {
+                if (i == 0) {
+                    frameI = imageDict.get(imgName);
+                } else {
+                    
+                }
+                    
+            }
+        }
+        
+
+        
+    }
+    
+    public static ArrayList<Tile> doTiles(BufferedImage img, int nTiles) {
+        allTiles = new ArrayList();
+        
+        int propX = img.getWidth() / nTiles;
+        int propY = img.getHeight() / nTiles;
+        
+        WritableRaster wr = (WritableRaster) img.getData();
+        
+
+        for (int i = 0; i < nTiles; i++) {
+            for (int j = 0; j < nTiles; j++) {
+                if (i * propX + propX < img.getWidth()) {
+                    if (j * propY + propY < img.getHeight()) {
+                        WritableRaster tile = (WritableRaster)wr.createChild((i * propX), (j * propY), propX, propY, 0, 0, null);
+                        BufferedImage buffTile = new BufferedImage(img.getColorModel(), tile, 
+                        img.getColorModel().isAlphaPremultiplied(), null);
+                        Tile t = new Tile(buffTile, i*propX, j*propY);
+                        allTiles.add(t);
+                    }
+                }
+            }
+        }
+       
+        return allTiles;
+    }
+    
+    public double compareImg(double x, double y, double z, double x2,double y2, double z2) {
+        return Math.sqrt(x-x2) + Math.sqrt(y-y2)+Math.sqrt(z-z2);
+    }
+    
+    public void createCodedImg(BufferedImage frameI, BufferedImage frameP, int thrs,int nTiles,int seekRange) {
+        ArrayList<Tile> tilesP = doTiles(frameP,nTiles);
+        int[] colorsTileX;
+        int[] colors;
+        //3-position array where we will store the mean value of every pixel of every channel
+        int[] meanColorTileX = new int[3];
+        int[] meanColor = new int[3];
+        //mean values for every channel
+        double meanRed, meanGreen, meanBlue;
+        double meanRedX, meanGreenX, meanBlueX;
+        
+        int nPixels;
+        
+        for (Tile tile: tilesP) {
+            nPixels = tile.getImg().getWidth() * tile.getImg().getHeight();
+            int red = 0, green=0, blue = 0;
+            for (int tileX = 0; tileX < tile.getImg().getWidth(); tileX++) {
+                for (int tileY = 0; tileY < tile.getImg().getHeight(); tileY++) {
+                    colorsTileX = getPixelColor(tile.getImg(),tileX,tileY);
+                    red += colorsTileX[0];
+                    green += colorsTileX[1];
+                    blue += colorsTileX[2];
+                }
+            }
+            meanRedX = red / nPixels;
+
+            meanGreenX = green /  nPixels;
+
+            meanBlueX = blue /  nPixels;
+
+            
+            for (int x = 0; x < frameI.getWidth()-tile.getImg().getWidth()-seekRange; x++){ //-1????????
+                for (int y = 0; y < frameI.getHeight()-tile.getImg().getHeight()-seekRange; y++) {
+                    
+                    for (int seekX = 0; seekX < seekRange; seekX++) {
+                        for (int seekY = 0; seekY < seekRange; seekY++) {
+
+                            
+                            for (int k = x+seekX; k < tile.getImg().getWidth()+seekRange; k++) {
+                                for (int t = y+seekY; t < tile.getImg().getHeight()+seekRange; t++) {
+                                    colors = getPixelColor(frameI,k,t);
+                                    red += colors[0];
+                                    green += colors[1];
+                                    blue += colors[2];
+                                }
+                            }
+                            meanRed = red / nPixels;
+ 
+                            meanGreen = green /  nPixels;
+
+                            meanBlue = blue /  nPixels;
+
+                            
+                            if (compareImg(meanRedX,meanGreenX,meanBlueX,meanRed,meanGreen,meanBlue) > thrs) {
+                                //see you tmrrw;
+                                //pintar i guardar tile
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        
     }
 }
