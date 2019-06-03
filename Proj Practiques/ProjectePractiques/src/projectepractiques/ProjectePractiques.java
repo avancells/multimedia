@@ -138,7 +138,7 @@ public class ProjectePractiques {
     }
     
     // Returns the color of a pixel from a BufferedImage, given x and y
-    public static int[] getPixelColor(BufferedImage image,int x,int y) {
+   public static int[] getPixelColor(BufferedImage image,int x,int y) {
        
         int colors[] = new int[3];
         int clr=  image.getRGB(x,y); 
@@ -302,7 +302,7 @@ public class ProjectePractiques {
                 int distance = (value - (-value)+1)*(value - (-value)+1);
                 //For every channel, compute the new pixel value
                 meanRed = red / distance;
-                meanColor[0] = (int) meanRed;
+                meanColor[0] = (int) meanRed;   
                 meanGreen = green /  distance;
                 meanColor[1] = (int) meanGreen;
                 meanBlue = blue /  distance;
@@ -408,7 +408,7 @@ public class ProjectePractiques {
         int[] meanColorTileX = new int[3];
         int[] meanColor = new int[3];
         //mean values for every channel
-        double meanRed, meanGreen, meanBlue;
+        double meanRed=0, meanGreen=0, meanBlue =0;
         double meanRedX, meanGreenX, meanBlueX;
         
         int nPixels;
@@ -430,39 +430,33 @@ public class ProjectePractiques {
 
             meanBlueX = blue /  nPixels;
 
-            
-            for (int x = 0; x < frameI.getWidth()-tile.getImg().getWidth()-seekRange; x++){ //-1????????
-                for (int y = 0; y < frameI.getHeight()-tile.getImg().getHeight()-seekRange; y++) {
+            for (int seekX = tile.getX(); seekX < tile.getX()+seekRange; seekX++) {
+                for (int seekY = tile.getY(); seekY < tile.getY()+seekRange; seekY++) {
                     
-                    for (int seekX = 0; seekX < seekRange; seekX++) {
-                        for (int seekY = 0; seekY < seekRange; seekY++) {
-
+                    for (int f = seekX; f <= seekX + tile.getImg().getWidth(); f++) {
+                        for (int k = seekY; k <= seekY + tile.getImg().getHeight(); k++) {
                             
-                            for (int k = x+seekX; k < tile.getImg().getWidth()+seekRange; k++) {
-                                for (int t = y+seekY; t < tile.getImg().getHeight()+seekRange; t++) {
-                                    colors = getPixelColor(frameI,k,t);
-                                    red += colors[0];
-                                    green += colors[1];
-                                    blue += colors[2];
-                                }
-                            }
-                            meanRed = red / nPixels;
- 
-                            meanGreen = green /  nPixels;
-
-                            meanBlue = blue /  nPixels;
-
                             
-                            if (compareImg(meanRedX,meanGreenX,meanBlueX,meanRed,meanGreen,meanBlue) > thrs) {
-                                //see you tmrrw;
-                                //pintar i guardar tile
+                            if (seekY + f >= 0 && seekX + k >= 0 && seekY + f < frameI.getHeight() && seekX + k < frameI.getWidth()) {
+                                colors = getPixelColor(frameI,seekX+k,seekY+f);
+                                red += colors[0];
+                                green += colors[1];
+                                blue += colors[2];
                             }
                         }
                     }
+                    meanRed = red / nPixels;
+                    meanGreen = green /  nPixels;
+                    meanBlue = blue /  nPixels;
                 }
             }
-        }
 
-        
+
+            if (compareImg(meanRedX,meanGreenX,meanBlueX,meanRed,meanGreen,meanBlue) > thrs) {
+                //see you tmrrw;
+                //pintar i guardar tile
+            }
+
+        }
     }
 }
