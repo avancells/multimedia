@@ -109,12 +109,24 @@ public class ProjectePractiques {
                 Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);
             }
             
-            startEncode();
+            //startEncode();
 
             
         }
         if(args.decode == 1){
-            System.out.println("Decoding mode (Not implemented yet)");
+            BufferedImage frameI = null;
+            BufferedImage frameP = null;
+            try {
+                System.out.println("Decoding mode (Not implemented yet)");
+                frameI = readImage("Cubo00.png");
+                frameP = readImage("Cubo01.png");
+                
+            } catch (IOException ex) {
+                Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            
+            createCodedImg(frameI, frameP, 20, args.nTiles, 10);
+            
         }
         
     }
@@ -396,11 +408,11 @@ public class ProjectePractiques {
         return allTiles;
     }
     
-    public double compareImg(double x, double y, double z, double x2,double y2, double z2) {
+    public static double compareImg(double x, double y, double z, double x2,double y2, double z2) {
         return Math.sqrt(x-x2) + Math.sqrt(y-y2)+Math.sqrt(z-z2);
     }
     
-    public void createCodedImg(BufferedImage frameI, BufferedImage frameP, int thrs,int nTiles,int seekRange) {
+    public static void createCodedImg(BufferedImage frameI, BufferedImage frameP, int thrs,int nTiles,int seekRange) {
         ArrayList<Tile> tilesP = doTiles(frameP,nTiles);
         int[] colorsTileX;
         int[] colors;
@@ -413,6 +425,9 @@ public class ProjectePractiques {
         
         int nPixels;
         
+        WritableRaster bitmap = (WritableRaster) frameP.getData();
+        WritableRaster frameP_mod = bitmap.createWritableChild(frameP.getMinX(), frameP.getMinY(), frameP.getWidth(), frameP.getHeight(), 0,0, null);
+
         for (Tile tile: tilesP) {
             nPixels = tile.getImg().getWidth() * tile.getImg().getHeight();
             int red = 0, green=0, blue = 0;
@@ -429,10 +444,12 @@ public class ProjectePractiques {
             meanGreenX = green /  nPixels;
 
             meanBlueX = blue /  nPixels;
-
-            for (int seekX = tile.getX(); seekX < tile.getX()+seekRange; seekX++) {
-                for (int seekY = tile.getY(); seekY < tile.getY()+seekRange; seekY++) {
-                    
+            
+            
+            
+            for (int seekX = tile.getX(); seekX < tile.getX()+ seekRange; seekX++) {
+                for (int seekY = tile.getY(); seekY < tile.getY()+ seekRange; seekY++) {
+                    //System.out.println(seekX + " " + " Y: " + seekY + " " );
                     for (int f = seekX; f <= seekX + tile.getImg().getWidth(); f++) {
                         for (int k = seekY; k <= seekY + tile.getImg().getHeight(); k++) {
                             
@@ -445,18 +462,44 @@ public class ProjectePractiques {
                             }
                         }
                     }
+                    
                     meanRed = red / nPixels;
                     meanGreen = green /  nPixels;
                     meanBlue = blue /  nPixels;
+                    
+                    red = 0;
+                    green = 0;
+                    blue = 0;
+                    //System.out.println(meanBlue);
+                    
+                    
+                    //System.out.println(compareImg(meanRedX,meanGreenX,meanBlueX,meanRed,meanGreen,meanBlue));
+                    if (compareImg(meanRedX,meanGreenX,meanBlueX,meanRed,meanGreen,meanBlue) > thrs) {
+                        //see you tmrrw;
+                        //pintar i guardar tile
+                        //System.out.println("Guardant la merda aquesta");
+                        //System.out.println(tile.getX());
+                        //System.out.println(tile.getY());
+                        for (int temp_tileX = tile.getX(); temp_tileX < tile.getImg().getWidth() + tile.getX(); temp_tileX++) {
+                            for (int temp_tileY = tile.getY(); temp_tileY < tile.getImg().getHeight() + tile.getY(); temp_tileY++) {
+                                meanColor[0] = (int) meanRedX;
+                                meanColor[1] = (int) meanGreenX;
+                                meanColor[2] = (int) meanBlueX;
+
+                                frameP_mod.setPixel(temp_tileX,temp_tileY,meanColor);
+                            }
+                        }
+                    }
+                    
+                    
+                    
                 }
             }
 
 
-            if (compareImg(meanRedX,meanGreenX,meanBlueX,meanRed,meanGreen,meanBlue) > thrs) {
-                //see you tmrrw;
-                //pintar i guardar tile
-            }
 
         }
+        BufferedImage frameP_new = new BufferedImage(frameP.getColorModel(),frameP_mod,frameP.isAlphaPremultiplied(),null);
+        showImage(frameP_new);
     }
 }

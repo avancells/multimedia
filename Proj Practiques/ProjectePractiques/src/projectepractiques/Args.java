@@ -45,7 +45,7 @@ public class Args {
     int average = 0;
     
     @Parameter(names = "--nTiles", description = "nombre de tessel·les en la qual dividir la imatge")
-    int nTiles = 0;
+    int nTiles = 8;
     
     @Parameter(names = "--seekRange", description = "desplaçament màxim en la cerca de tessel·les coincidents")
     int seekRange = 0;
