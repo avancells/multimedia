@@ -19,6 +19,9 @@ public class Args {
 
     @Parameter(names = { "--input", "-i" }, description = "Fitxer d’entrada. Argument obligatori.")
     String input = "";
+    
+    @Parameter(names = { "--codedInput", "-ci" }, description = "Fitxer d’entrada a la descodificació.")
+    String codedInput = "test.zip";
 
     @Parameter(names = { "--output", "-o" }, description = " Nom del fitxer en format propi amb la seqüència d’imatges\n" +
 "de sortida i la informació necessària per la descodificació.")
@@ -44,8 +47,8 @@ public class Args {
     @Parameter(names = "--averaging", description = "aplicació d’un filtre de promig en zones de value x value.")
     int average = 0;
     
-    @Parameter(names = "--nTiles", description = "nombre de tessel·les en la qual dividir la imatge")
-    int nTiles = 8;
+    @Parameter(names = "--tileSize", description = "Mida de les tesel·les.")
+    int tileSize = 8;
     
     @Parameter(names = "--seekRange", description = "desplaçament màxim en la cerca de tessel·les coincidents")
     int seekRange = 0;
@@ -59,6 +62,9 @@ public class Args {
     
     @Parameter(names = "--batch", description = "Mode batch.  Si és 1 no es reproduïrà el video, si és 0 es reproduïrà.")
     int batch = 0;
+    
+    @Parameter(names = "--threshold", description = "Threshold de la comparació d'imatges.")
+    int thresh = 0;
     
     @Parameter(names = "-help", description = "Mostra la descripció de les comandes.")
     int help = 0;

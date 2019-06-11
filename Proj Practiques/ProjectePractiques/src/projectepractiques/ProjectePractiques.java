@@ -13,8 +13,11 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
@@ -40,6 +43,7 @@ public class ProjectePractiques {
     public static ArrayList<BufferedImage> imagesToZip = new ArrayList<>();
     public static Map<String, BufferedImage> imageDict = new HashMap<>();
     public static ArrayList<Tile> allTiles = new ArrayList<>();
+    public static ArrayList<CodedData> dataList = new ArrayList<>();
 
     /**
      * @param args the command line arguments
@@ -109,23 +113,24 @@ public class ProjectePractiques {
                 Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);
             }
             
-            //startEncode();
-
+            try {
+                codeAllImages(args);
+            } catch (IOException ex) {
+                Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);          
+            }
             
         }
         if(args.decode == 1){
-            BufferedImage frameI = null;
-            BufferedImage frameP = null;
-            try {
-                System.out.println("Decoding mode (Not implemented yet)");
-                frameI = readImage("Cubo00.png");
-                frameP = readImage("Cubo01.png");
-                
-            } catch (IOException ex) {
-                Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);
+            decodeAllImages(args);
+            
+            // Start videoplayer thread
+            if(args.batch == 0){
+                VideoPlayer vp = new VideoPlayer(args.fps, imageNames, new HashMap<>(imageDict));
+                Thread t = new Thread(vp);
+                System.out.println("Starting videoplayer thread...");
+                t.start();
             }
             
-            createCodedImg(frameI, frameP, 20, args.nTiles, 10);
             
         }
         
@@ -195,7 +200,7 @@ public class ProjectePractiques {
         }
         zip.close();
         // Sort the image names list
-        Collections.sort(imageNames); 
+        //Collections.sort(imageNames, (String f1, String f2) -> f1.compareTo(f2)); 
         
     }
     
@@ -338,7 +343,7 @@ public class ProjectePractiques {
         for (int i =0; i< imageNames.size(); i++) {
             File tempImage = new File("image_"+Integer.toString(i)+".jpg");
             ImageIO.write(imageDict.get(imageNames.get(i)),"jpg",tempImage);
-            createFileToZip(imageDict.get(imageNames.get(i)),i,zipOS);
+            createFileToZip(imageDict.get(imageNames.get(i)),"image_",i,zipOS);
             tempImage.delete();
         }
         zipOS.finish(); //Good practice!
@@ -346,13 +351,13 @@ public class ProjectePractiques {
     }
 
     //Function that stores into a zip file the passed image
-    public static void createFileToZip(BufferedImage image,int name,ZipOutputStream zipOS) throws FileNotFoundException, IOException {
+    public static void createFileToZip(BufferedImage image, String path, int name,ZipOutputStream zipOS) throws FileNotFoundException, IOException {
         //Create the jpeg image
-        File f = new File("image_"+Integer.toString(name)+".jpg");
+        File f = new File(path+Integer.toString(name)+".jpg");
         //Create the inputstream
         FileInputStream fis = new FileInputStream(f);
         //Create a zipentry for the file we are gonna include to the zip
-        ZipEntry zipEntry = new ZipEntry("image_"+Integer.toString(name)+".jpg");
+        ZipEntry zipEntry = new ZipEntry(path+Integer.toString(name)+".jpg");
         //Store the image into the zip as an array of bytes
         zipOS.putNextEntry(zipEntry);
         byte[] bytes = new byte[1024];
@@ -382,17 +387,21 @@ public class ProjectePractiques {
         
     }
     
-    public static ArrayList<Tile> doTiles(BufferedImage img, int nTiles) {
+    public static ArrayList<Tile> doTiles(BufferedImage img, int tileSize) {
         allTiles = new ArrayList();
         
-        int propX = img.getWidth() / nTiles;
-        int propY = img.getHeight() / nTiles;
+        int propX = tileSize;//img.getWidth() / nTiles;
+        int propY = tileSize;//img.getHeight() / nTiles;
+        
+        int nTilesX = img.getWidth() / tileSize;
+        int nTilesY = img.getHeight() / tileSize;
+                
         
         WritableRaster wr = (WritableRaster) img.getData();
         
 
-        for (int i = 0; i < nTiles; i++) {
-            for (int j = 0; j < nTiles; j++) {
+        for (int i = 0; i < nTilesX; i++) {
+            for (int j = 0; j < nTilesY; j++) {
                 if (i * propX + propX < img.getWidth()) {
                     if (j * propY + propY < img.getHeight()) {
                         WritableRaster tile = (WritableRaster)wr.createChild((i * propX), (j * propY), propX, propY, 0, 0, null);
@@ -409,11 +418,22 @@ public class ProjectePractiques {
     }
     
     public static double compareImg(double x, double y, double z, double x2,double y2, double z2) {
-        return Math.sqrt(x-x2) + Math.sqrt(y-y2)+Math.sqrt(z-z2);
+        return  Math.sqrt(Math.pow(x-x2, 2) + Math.pow(y-y2, 2)+ Math.pow(z-z2, 2));
     }
     
-    public static void createCodedImg(BufferedImage frameI, BufferedImage frameP, int thrs,int nTiles,int seekRange) {
-        ArrayList<Tile> tilesP = doTiles(frameP,nTiles);
+    public static double compareImg2(double x, double y, double z, double x2,double y2, double z2) {
+        return  10 * (Math.sqrt(x-x2) + Math.sqrt(y-y2)+ Math.sqrt(z-z2));
+    }
+    
+    public static BufferedImage createCodedImg(BufferedImage frameI, BufferedImage frameP, int thrs, int tileSize, int seekRange) {
+        ArrayList<Tile> tilesP = doTiles(frameP,tileSize);
+        ArrayList<Integer> bestTilesX = new ArrayList<>();
+        ArrayList<Integer> bestTilesY = new ArrayList<>();
+        ArrayList<Integer> bestOriginX = new ArrayList<>();
+        ArrayList<Integer> bestOriginY = new ArrayList<>();
+        int tileWidth = tilesP.get(0).getImg().getWidth();
+        int tileHeight = tilesP.get(0).getImg().getHeight();
+        
         int[] colorsTileX;
         int[] colors;
         //3-position array where we will store the mean value of every pixel of every channel
@@ -425,10 +445,17 @@ public class ProjectePractiques {
         
         int nPixels;
         
+        double compareValue;
+        
         WritableRaster bitmap = (WritableRaster) frameP.getData();
         WritableRaster frameP_mod = bitmap.createWritableChild(frameP.getMinX(), frameP.getMinY(), frameP.getWidth(), frameP.getHeight(), 0,0, null);
 
         for (Tile tile: tilesP) {
+            
+            double bestValue = 9999;
+            int bestX = -1, bestY = -1;
+            Tile bestTile = null;
+            
             nPixels = tile.getImg().getWidth() * tile.getImg().getHeight();
             int red = 0, green=0, blue = 0;
             for (int tileX = 0; tileX < tile.getImg().getWidth(); tileX++) {
@@ -445,15 +472,25 @@ public class ProjectePractiques {
 
             meanBlueX = blue /  nPixels;
             
-            
-            
-            for (int seekX = tile.getX(); seekX < tile.getX()+ seekRange; seekX++) {
-                for (int seekY = tile.getY(); seekY < tile.getY()+ seekRange; seekY++) {
+            for (int seekX = tile.getX() - seekRange; seekX < tile.getX()+ seekRange; seekX++) {
+                for (int seekY = tile.getY() - seekRange; seekY < tile.getY()+ seekRange; seekY++) {
+                    if (seekY < 0){
+                        seekY = 0;
+                    }
+                    if (seekY > frameI.getHeight()){
+                        seekY = frameI.getHeight();
+                    }
+                    if (seekX < 0){
+                        seekX = 0;
+                    }
+                    if (seekX > frameI.getWidth()){
+                        seekX = frameI.getWidth();
+                    }
                     //System.out.println(seekX + " " + " Y: " + seekY + " " );
-                    for (int f = seekX; f <= seekX + tile.getImg().getWidth(); f++) {
-                        for (int k = seekY; k <= seekY + tile.getImg().getHeight(); k++) {
+                    for (int f = seekX; f < seekX + tile.getImg().getWidth(); f++) {
+                        for (int k = seekY; k < seekY + tile.getImg().getHeight(); k++) {
                             
-                            
+                            //System.out.println((seekX + k) + " " + (seekY + f));
                             if (seekY + f >= 0 && seekX + k >= 0 && seekY + f < frameI.getHeight() && seekX + k < frameI.getWidth()) {
                                 colors = getPixelColor(frameI,seekX+k,seekY+f);
                                 red += colors[0];
@@ -470,36 +507,236 @@ public class ProjectePractiques {
                     red = 0;
                     green = 0;
                     blue = 0;
-                    //System.out.println(meanBlue);
                     
-                    
-                    //System.out.println(compareImg(meanRedX,meanGreenX,meanBlueX,meanRed,meanGreen,meanBlue));
-                    if (compareImg(meanRedX,meanGreenX,meanBlueX,meanRed,meanGreen,meanBlue) > thrs) {
+                    compareValue = compareImg(meanRedX,meanGreenX,meanBlueX,meanRed,meanGreen,meanBlue);
+                    //System.out.println(compareValue);
+                    if ( compareValue < thrs && compareValue != 0) {
                         //see you tmrrw;
-                        //pintar i guardar tile
-                        //System.out.println("Guardant la merda aquesta");
-                        //System.out.println(tile.getX());
-                        //System.out.println(tile.getY());
-                        for (int temp_tileX = tile.getX(); temp_tileX < tile.getImg().getWidth() + tile.getX(); temp_tileX++) {
-                            for (int temp_tileY = tile.getY(); temp_tileY < tile.getImg().getHeight() + tile.getY(); temp_tileY++) {
-                                meanColor[0] = (int) meanRedX;
-                                meanColor[1] = (int) meanGreenX;
-                                meanColor[2] = (int) meanBlueX;
-
-                                frameP_mod.setPixel(temp_tileX,temp_tileY,meanColor);
-                            }
+                        // guardar top tile
+                        if(compareValue < bestValue){
+                            //System.out.println(compareValue);
+                            bestValue = compareValue;
+                            bestTile = tile;
+                            bestX = seekX;
+                            bestY = seekY;
                         }
                     }
-                    
-                    
-                    
+
                 }
             }
+            if(bestTile != null){
+                for (int temp_tileX = bestTile.getX(); temp_tileX < bestTile.getImg().getWidth() + bestTile.getX(); temp_tileX++) {
+                    for (int temp_tileY = bestTile.getY(); temp_tileY < bestTile.getImg().getHeight() + bestTile.getY(); temp_tileY++) {
+                        meanColor[0] = (int) meanRedX;
+                        meanColor[1] = (int) meanGreenX;
+                        meanColor[2] = (int) meanBlueX;
 
-
-
+                        frameP_mod.setPixel(temp_tileX,temp_tileY,meanColor);
+                    }
+                }
+                bestTilesX.add(bestTile.getX());
+                bestTilesY.add(bestTile.getY());
+                bestOriginX.add(bestX);
+                bestOriginY.add(bestY);
+                
+            }
         }
+        
+        CodedData codedData = new CodedData(bestTilesX, bestTilesY, bestOriginX, bestOriginY, tileWidth, tileHeight);
+        dataList.add(codedData);
+        
         BufferedImage frameP_new = new BufferedImage(frameP.getColorModel(),frameP_mod,frameP.isAlphaPremultiplied(),null);
-        showImage(frameP_new);
+        return frameP_new;
+        
+        
+    }
+    
+//    public static void decodeImg(){
+//        //save image
+//        try{
+//            
+//            
+//            File tempImage = new File("image_"+ 0 +".jpg");
+//            ImageIO.write(frameI,"jpg",tempImage);
+//            createFileToZip(frameI, 0, zipOS);
+//            
+//            
+//            tempImage = new File("image_"+ Integer.toString(number) +".jpg");
+//            ImageIO.write(frameP_new,"jpg",tempImage);
+//
+//            createFileToZip(frameP_new, number, zipOS);
+//
+//
+//        }catch(Exception e){
+//            System.out.println("Teputamare");
+//        }
+//
+//        //save info 
+//        CodedData codedData = new CodedData(bestTilesX, bestTilesY, bestOriginX, bestOriginY, tileWidth, tileHeight);
+//        try {
+//            FileOutputStream out = new FileOutputStream("codedData.out");
+//            ObjectOutputStream oos = new ObjectOutputStream(out);
+//            oos.writeObject(codedData);
+//            oos.flush();
+//        } catch (Exception e) {
+//            System.out.println("Problem serializing: " + e);
+//        }
+//        
+//        
+//        ////// decode
+//        // recuperar imatge
+//        //llegir coded data
+//        CodedData recoveredData = null;
+//
+//        try {
+//          FileInputStream in = new FileInputStream("codedData.out");
+//          ObjectInputStream ois = new ObjectInputStream(in);
+//          recoveredData = (CodedData) (ois.readObject());
+//        } catch (Exception e) {
+//          System.out.println("Problem serializing: " + e);
+//        }
+//
+//        
+//        WritableRaster bitmap2 = (WritableRaster) frameP.getData();
+//        WritableRaster decodedP = bitmap2.createWritableChild(frameP.getMinX(), frameP.getMinY(), frameP.getWidth(), frameP.getHeight(), 0,0, null);
+//        
+//        int[] tempColor;
+//        for(int i = 0; i < recoveredData.bestTilesX.size(); i++){
+//            for (int baseX = 0; baseX < recoveredData.tileWidth ; baseX++) {
+//                for (int baseY = 0; baseY < recoveredData.tileHeight; baseY++) {
+//                    tempColor = getPixelColor(frameI, recoveredData.bestOriginX.get(i)+baseX, recoveredData.bestOriginY.get(i)+baseY);
+//                    
+//                    decodedP.setPixel(recoveredData.bestTilesX.get(i)+baseX, recoveredData.bestTilesY.get(i)+baseY, tempColor);
+//                }
+//            }
+//        }
+//        
+//        BufferedImage final_decodedP = new BufferedImage(frameP.getColorModel(),decodedP,frameP.isAlphaPremultiplied(),null);
+//        showImage(final_decodedP);
+//
+//        
+//    }
+    
+    public static void codeAllImages(Args args) throws FileNotFoundException, IOException{
+        BufferedImage tempI=null, tempP=null;
+        FileOutputStream fos = new FileOutputStream("test.zip");
+        ZipOutputStream zipOS = new ZipOutputStream(fos);
+        int j = 0;
+        for(int i= 0; i < imageNames.size(); i++){ 
+            if(j >= (imageNames.size()/args.gop)){
+                j=0;
+            }
+            if(j==0){
+                // Frame I
+                tempI = imageDict.get(imageNames.get(i));
+                imgToZip(tempI, i, zipOS, "image_coded_");
+            }else{
+                //Frame P
+                tempP = createCodedImg(tempI, imageDict.get(imageNames.get(i)), args.thresh, args.tileSize, args.seekRange);
+                imgToZip(tempP, i, zipOS, "image_coded_");
+                //showImage(tempP);
+            }
+            j++;
+                
+            
+            //imageDict.get(imageNames.get(i))
+        }
+        zipOS.finish(); //Good practice!
+        zipOS.close();
+        
+        try {
+            FileOutputStream out = new FileOutputStream("codedData.out");
+            ObjectOutputStream oos = new ObjectOutputStream(out);
+            oos.writeObject(dataList);
+            oos.flush();
+        } catch (Exception e) {
+            System.out.println("Problem serializing: " + e);
+        }
+    }
+    
+    public static void decodeAllImages(Args args){
+        imageNames.clear();
+        imagesToZip.clear();
+        imageDict.clear();
+        
+        // llegir coded data
+        ArrayList<CodedData> recoveredData = null;
+
+        try {
+          Boolean empty = false;
+          FileInputStream in = new FileInputStream("codedData.out");
+          ObjectInputStream ois = new ObjectInputStream(in);
+          recoveredData =  (ArrayList<CodedData>) (ois.readObject());
+        } catch (Exception e) {
+          System.out.println("Problem serializing: " + e);
+        }
+        
+        // llegir imatges del zip
+        try {
+            System.out.println("Reading zip file...");
+            readZip(args.codedInput);
+        } catch (IOException ex) {
+            Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        BufferedImage tempFrame=null, tempFrameI=null;
+        WritableRaster tempBitmap=null;
+        WritableRaster tempDecoded=null;
+        CodedData tempData=null;
+        
+        BufferedImage tempBufferedImage = null;
+        
+        
+        int z = 0;
+        int recoveredDataCounter = 0;
+        // per cada imatge
+        for(int i= 0; i < imageNames.size(); i++){
+            if(z >= (imageNames.size()/args.gop)){
+                z=0;
+            }
+            if(z == 0){
+                tempFrameI = imageDict.get(imageNames.get(i));
+                imageDict.put(imageNames.get(i), tempFrameI);
+            }else{
+                 // recuperar imatge
+                tempFrame = imageDict.get(imageNames.get(i)); 
+                tempBitmap = (WritableRaster) tempFrame.getData();
+                tempDecoded = tempBitmap.createWritableChild(tempFrame.getMinX(), tempFrame.getMinY(), tempFrame.getWidth(), tempFrame.getHeight(), 0,0, null);
+
+                tempData = recoveredData.get(recoveredDataCounter);
+                recoveredDataCounter++;
+
+                //System.out.println(tempData.bestTilesX);
+                //System.out.println(tempData.tileWidth);
+                //System.out.println(tempData.tileHeight);
+                int[] tempColor;
+                //if (seekY + f >= 0 && seekX + k >= 0 && seekY + f < frameI.getHeight() && seekX + k < frameI.getWidth())
+                
+                for(int k = 0; k < tempData.bestTilesX.size(); k++){
+                    for (int baseX = 0; baseX < tempData.tileWidth ; baseX++) {
+                        for (int baseY = 0; baseY < tempData.tileHeight; baseY++) {
+                            tempColor = getPixelColor(tempFrameI, tempData.bestOriginX.get(k)+baseX, tempData.bestOriginY.get(k)+baseY);
+                            tempDecoded.setPixel(tempData.bestTilesX.get(k)+baseX, tempData.bestTilesY.get(k)+baseY, tempColor);
+                        }
+                    }
+                }
+                
+                // guardar-la
+                tempBufferedImage = new BufferedImage(tempFrame.getColorModel(),tempDecoded,tempFrame.isAlphaPremultiplied(),null);
+                imageDict.put(imageNames.get(i), tempBufferedImage);
+            }
+            z++;
+        }
+
+    }
+    
+    public static void imgToZip(BufferedImage image, int number, ZipOutputStream zipOS, String path){
+        try {
+            File tempImage = new File(path+ number +".jpg");
+            ImageIO.write(image,"jpg",tempImage);
+            createFileToZip(image, path, number, zipOS);
+            tempImage.delete();
+        } catch (IOException ex) {
+            Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 }
