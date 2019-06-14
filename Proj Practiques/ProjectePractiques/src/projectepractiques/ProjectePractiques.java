@@ -16,12 +16,9 @@ import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -32,6 +29,9 @@ import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 /**
  *
@@ -123,6 +123,17 @@ public class ProjectePractiques {
         if(args.decode == 1){
             decodeAllImages(args);
             
+            try {
+                System.out.println("Saving images to: " + "decocde.zip");
+                saveToZip("decode.zip");
+            } catch (IOException ex) {
+                Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            try {
+                readZip("decode.zip");
+            } catch (IOException ex) {
+                Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);
+            }
             // Start videoplayer thread
             if(args.batch == 0){
                 VideoPlayer vp = new VideoPlayer(args.fps, imageNames, new HashMap<>(imageDict));
@@ -158,7 +169,17 @@ public class ProjectePractiques {
    public static int[] getPixelColor(BufferedImage image,int x,int y) {
        
         int colors[] = new int[3];
-        int clr=  image.getRGB(x,y); 
+        int clr = 0;
+        
+        try{
+            clr = image.getRGB(x,y); 
+        }catch(Exception e){
+            System.out.println(e);
+            System.out.println(x + " " + y);
+        }
+        
+        
+        
         int  red   = (clr & 0x00ff0000) >> 16;
         int  green = (clr & 0x0000ff00) >> 8;
         int  blue  =  clr & 0x000000ff;
@@ -193,9 +214,21 @@ public class ProjectePractiques {
             
             ZipEntry zipEntry = entries.nextElement();
             InputStream entryStream = zip.getInputStream(zipEntry);
-            BufferedImage image = ImageIO.read(entryStream);
-            imageNames.add(zipEntry.getName());            
-            imageDict.put(zipEntry.getName(), image);
+            if("codedData.gz".equals(zipEntry.getName())){
+                FileInputStream in = new FileInputStream("codedData.gz");
+                GZIPInputStream gis = new GZIPInputStream(in);
+                ObjectInputStream ois = new ObjectInputStream(gis);
+                try {
+                    dataList =  (ArrayList<CodedData>) (ois.readObject());
+                } catch (ClassNotFoundException ex) {
+                    Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }else{
+                BufferedImage image = ImageIO.read(entryStream);
+                imageNames.add(zipEntry.getName());            
+                imageDict.put(zipEntry.getName(), image);
+            }
+            
 
         }
         zip.close();
@@ -395,18 +428,17 @@ public class ProjectePractiques {
         
         int nTilesX = img.getWidth() / tileSize;
         int nTilesY = img.getHeight() / tileSize;
-                
         
         WritableRaster wr = (WritableRaster) img.getData();
         
 
         for (int i = 0; i < nTilesX; i++) {
             for (int j = 0; j < nTilesY; j++) {
-                if (i * propX + propX < img.getWidth()) {
-                    if (j * propY + propY < img.getHeight()) {
+                if (i * propX + propX <= img.getWidth()) {
+                    if (j * propY + propY <= img.getHeight()) {
                         WritableRaster tile = (WritableRaster)wr.createChild((i * propX), (j * propY), propX, propY, 0, 0, null);
                         BufferedImage buffTile = new BufferedImage(img.getColorModel(), tile, 
-                        img.getColorModel().isAlphaPremultiplied(), null);
+                        img.getColorModel().isAlphaPremultiplied(), null);                        
                         Tile t = new Tile(buffTile, i*propX, j*propY);
                         allTiles.add(t);
                     }
@@ -425,14 +457,19 @@ public class ProjectePractiques {
         return  10 * (Math.sqrt(x-x2) + Math.sqrt(y-y2)+ Math.sqrt(z-z2));
     }
     
-    public static BufferedImage createCodedImg(BufferedImage frameI, BufferedImage frameP, int thrs, int tileSize, int seekRange) {
+    public static double compareImg3(double x, double y, double z, double x2,double y2, double z2) {
+        return  ( ((float) (Math.abs(x-x2) / 255.0) + ((float) Math.abs(y-y2) / 255.0) + ((float) Math.abs(z-z2) / 255.0)) / 3 * 100);
+    }
+    
+    
+    public static BufferedImage[] createCodedImg(BufferedImage frameI, BufferedImage frameP, int thrs, int tileSize, int seekRange) {
         ArrayList<Tile> tilesP = doTiles(frameP,tileSize);
         ArrayList<Integer> bestTilesX = new ArrayList<>();
         ArrayList<Integer> bestTilesY = new ArrayList<>();
         ArrayList<Integer> bestOriginX = new ArrayList<>();
         ArrayList<Integer> bestOriginY = new ArrayList<>();
-        int tileWidth = tilesP.get(0).getImg().getWidth();
-        int tileHeight = tilesP.get(0).getImg().getHeight();
+        int tileWidth = tileSize;
+        int tileHeight = tileSize;
         
         int[] colorsTileX;
         int[] colors;
@@ -443,12 +480,14 @@ public class ProjectePractiques {
         double meanRed=0, meanGreen=0, meanBlue =0;
         double meanRedX, meanGreenX, meanBlueX;
         
-        int nPixels;
+        double nPixels;
         
         double compareValue;
         
         WritableRaster bitmap = (WritableRaster) frameP.getData();
+        WritableRaster bitmap2 = (WritableRaster) frameP.getData();
         WritableRaster frameP_mod = bitmap.createWritableChild(frameP.getMinX(), frameP.getMinY(), frameP.getWidth(), frameP.getHeight(), 0,0, null);
+        WritableRaster ref_P = bitmap2.createWritableChild(frameP.getMinX(), frameP.getMinY(), frameP.getWidth(), frameP.getHeight(), 0,0, null);
 
         for (Tile tile: tilesP) {
             
@@ -466,11 +505,15 @@ public class ProjectePractiques {
                     blue += colorsTileX[2];
                 }
             }
-            meanRedX = red / nPixels;
+            //System.out.println(tile.getX() + " " + tile.getY);
+            meanRedX = (double) red / nPixels;
 
-            meanGreenX = green /  nPixels;
+            meanGreenX = (double) green /  nPixels;
 
-            meanBlueX = blue /  nPixels;
+            meanBlueX = (double) blue /  nPixels;
+            
+            
+
             
             for (int seekX = tile.getX() - seekRange; seekX < tile.getX()+ seekRange; seekX++) {
                 for (int seekY = tile.getY() - seekRange; seekY < tile.getY()+ seekRange; seekY++) {
@@ -486,13 +529,15 @@ public class ProjectePractiques {
                     if (seekX > frameI.getWidth()){
                         seekX = frameI.getWidth();
                     }
-                    //System.out.println(seekX + " " + " Y: " + seekY + " " );
-                    for (int f = seekX; f < seekX + tile.getImg().getWidth(); f++) {
-                        for (int k = seekY; k < seekY + tile.getImg().getHeight(); k++) {
-                            
-                            //System.out.println((seekX + k) + " " + (seekY + f));
-                            if (seekY + f >= 0 && seekX + k >= 0 && seekY + f < frameI.getHeight() && seekX + k < frameI.getWidth()) {
-                                colors = getPixelColor(frameI,seekX+k,seekY+f);
+                    red = 0;
+                    green = 0;
+                    blue = 0;
+                    
+                    
+                    for (int f = seekX; f < seekX + tileSize; f++) {
+                        for (int k = seekY; k < seekY + tileSize; k++) {
+                            if((f < frameP.getWidth()) && (k < frameP.getHeight()) && (f >= 0) && (k >= 0)){
+                                colors = getPixelColor(frameI,f,k);
                                 red += colors[0];
                                 green += colors[1];
                                 blue += colors[2];
@@ -500,17 +545,18 @@ public class ProjectePractiques {
                         }
                     }
                     
-                    meanRed = red / nPixels;
-                    meanGreen = green /  nPixels;
-                    meanBlue = blue /  nPixels;
+
                     
-                    red = 0;
-                    green = 0;
-                    blue = 0;
                     
-                    compareValue = compareImg(meanRedX,meanGreenX,meanBlueX,meanRed,meanGreen,meanBlue);
+                    meanRed = (double) red / nPixels;
+                    meanGreen = (double) green /  nPixels;
+                    meanBlue = (double) blue /  nPixels;
+                    
+
+                    
+                    compareValue = compareImg2(meanRedX,meanGreenX,meanBlueX,meanRed,meanGreen,meanBlue);
                     //System.out.println(compareValue);
-                    if ( compareValue < thrs && compareValue != 0) {
+                    if ( compareValue < thrs && seekY <= frameP.getHeight() - tileSize &&  seekX <= frameP.getWidth() - tileSize) {
                         //see you tmrrw;
                         // guardar top tile
                         if(compareValue < bestValue){
@@ -525,13 +571,18 @@ public class ProjectePractiques {
                 }
             }
             if(bestTile != null){
-                for (int temp_tileX = bestTile.getX(); temp_tileX < bestTile.getImg().getWidth() + bestTile.getX(); temp_tileX++) {
-                    for (int temp_tileY = bestTile.getY(); temp_tileY < bestTile.getImg().getHeight() + bestTile.getY(); temp_tileY++) {
-                        meanColor[0] = (int) meanRedX;
-                        meanColor[1] = (int) meanGreenX;
-                        meanColor[2] = (int) meanBlueX;
-
+                for (int temp_tileX = tile.getX(); temp_tileX < tile.getImg().getWidth() + tile.getX(); temp_tileX++) {
+                    for (int temp_tileY = tile.getY(); temp_tileY < tile.getImg().getHeight() + tile.getY(); temp_tileY++) {
+                        meanColor[0] = (int) 0;//meanRedX;
+                        meanColor[1] = (int) 0;//meanGreenX;
+                        meanColor[2] = (int) 0;//meanBlueX;
+                        
+                        //ystem.out.println("temptilex: " + temp_tileX);
                         frameP_mod.setPixel(temp_tileX,temp_tileY,meanColor);
+                        //System.out.println("x: " + (bestX + temp_tileX - bestTile.getX()) + " y: " + (bestY+(temp_tileY - bestTile.getY())));
+                        colors = getPixelColor(frameI, bestX + (temp_tileX - tile.getX()), bestY+(temp_tileY - tile.getY()));
+                        ref_P.setPixel(temp_tileX, temp_tileY, colors);
+                        
                     }
                 }
                 bestTilesX.add(bestTile.getX());
@@ -546,79 +597,18 @@ public class ProjectePractiques {
         dataList.add(codedData);
         
         BufferedImage frameP_new = new BufferedImage(frameP.getColorModel(),frameP_mod,frameP.isAlphaPremultiplied(),null);
-        return frameP_new;
+        BufferedImage ref_buf = new BufferedImage(frameP.getColorModel(),ref_P,frameP.isAlphaPremultiplied(),null);
+        BufferedImage[] result = new BufferedImage[2];
+        result[0] = frameP_new;
+        result[1] = ref_buf;
+        return result;
         
         
     }
     
-//    public static void decodeImg(){
-//        //save image
-//        try{
-//            
-//            
-//            File tempImage = new File("image_"+ 0 +".jpg");
-//            ImageIO.write(frameI,"jpg",tempImage);
-//            createFileToZip(frameI, 0, zipOS);
-//            
-//            
-//            tempImage = new File("image_"+ Integer.toString(number) +".jpg");
-//            ImageIO.write(frameP_new,"jpg",tempImage);
-//
-//            createFileToZip(frameP_new, number, zipOS);
-//
-//
-//        }catch(Exception e){
-//            System.out.println("Teputamare");
-//        }
-//
-//        //save info 
-//        CodedData codedData = new CodedData(bestTilesX, bestTilesY, bestOriginX, bestOriginY, tileWidth, tileHeight);
-//        try {
-//            FileOutputStream out = new FileOutputStream("codedData.out");
-//            ObjectOutputStream oos = new ObjectOutputStream(out);
-//            oos.writeObject(codedData);
-//            oos.flush();
-//        } catch (Exception e) {
-//            System.out.println("Problem serializing: " + e);
-//        }
-//        
-//        
-//        ////// decode
-//        // recuperar imatge
-//        //llegir coded data
-//        CodedData recoveredData = null;
-//
-//        try {
-//          FileInputStream in = new FileInputStream("codedData.out");
-//          ObjectInputStream ois = new ObjectInputStream(in);
-//          recoveredData = (CodedData) (ois.readObject());
-//        } catch (Exception e) {
-//          System.out.println("Problem serializing: " + e);
-//        }
-//
-//        
-//        WritableRaster bitmap2 = (WritableRaster) frameP.getData();
-//        WritableRaster decodedP = bitmap2.createWritableChild(frameP.getMinX(), frameP.getMinY(), frameP.getWidth(), frameP.getHeight(), 0,0, null);
-//        
-//        int[] tempColor;
-//        for(int i = 0; i < recoveredData.bestTilesX.size(); i++){
-//            for (int baseX = 0; baseX < recoveredData.tileWidth ; baseX++) {
-//                for (int baseY = 0; baseY < recoveredData.tileHeight; baseY++) {
-//                    tempColor = getPixelColor(frameI, recoveredData.bestOriginX.get(i)+baseX, recoveredData.bestOriginY.get(i)+baseY);
-//                    
-//                    decodedP.setPixel(recoveredData.bestTilesX.get(i)+baseX, recoveredData.bestTilesY.get(i)+baseY, tempColor);
-//                }
-//            }
-//        }
-//        
-//        BufferedImage final_decodedP = new BufferedImage(frameP.getColorModel(),decodedP,frameP.isAlphaPremultiplied(),null);
-//        showImage(final_decodedP);
-//
-//        
-//    }
-    
     public static void codeAllImages(Args args) throws FileNotFoundException, IOException{
         BufferedImage tempI=null, tempP=null;
+        BufferedImage[] codeOut = null;
         FileOutputStream fos = new FileOutputStream("test.zip");
         ZipOutputStream zipOS = new ZipOutputStream(fos);
         int j = 0;
@@ -632,8 +622,9 @@ public class ProjectePractiques {
                 imgToZip(tempI, i, zipOS, "image_coded_");
             }else{
                 //Frame P
-                tempP = createCodedImg(tempI, imageDict.get(imageNames.get(i)), args.thresh, args.tileSize, args.seekRange);
-                imgToZip(tempP, i, zipOS, "image_coded_");
+                codeOut = createCodedImg(tempI, imageDict.get(imageNames.get(i)), args.thresh, args.tileSize, args.seekRange);
+                imgToZip(codeOut[0], i, zipOS, "image_coded_");
+                tempI = codeOut[1];
                 //showImage(tempP);
             }
             j++;
@@ -641,17 +632,39 @@ public class ProjectePractiques {
             
             //imageDict.get(imageNames.get(i))
         }
-        zipOS.finish(); //Good practice!
-        zipOS.close();
         
         try {
-            FileOutputStream out = new FileOutputStream("codedData.out");
-            ObjectOutputStream oos = new ObjectOutputStream(out);
+            FileOutputStream out = new FileOutputStream("codedData.gz");
+            GZIPOutputStream gos = new GZIPOutputStream(out);
+            ObjectOutputStream oos = new ObjectOutputStream(gos);
             oos.writeObject(dataList);
             oos.flush();
+            gos.flush();
+            out.flush();
+            
+            oos.close();
+            gos.close();
+            out.close();
+            
         } catch (Exception e) {
             System.out.println("Problem serializing: " + e);
         }
+        
+        FileInputStream fis = new FileInputStream("codedData.gz");
+        ZipEntry e = new ZipEntry("codedData.gz");
+        zipOS.putNextEntry(e);
+
+        byte[] bytes = new byte[1024];
+        int length;
+        while ((length = fis.read(bytes)) >= 0) {
+            zipOS.write(bytes, 0, length);
+        }
+        zipOS.closeEntry();
+        fis.close();
+
+        zipOS.finish(); //Good practice!
+        zipOS.close();
+        
     }
     
     public static void decodeAllImages(Args args){
@@ -661,15 +674,8 @@ public class ProjectePractiques {
         
         // llegir coded data
         ArrayList<CodedData> recoveredData = null;
-
-        try {
-          Boolean empty = false;
-          FileInputStream in = new FileInputStream("codedData.out");
-          ObjectInputStream ois = new ObjectInputStream(in);
-          recoveredData =  (ArrayList<CodedData>) (ois.readObject());
-        } catch (Exception e) {
-          System.out.println("Problem serializing: " + e);
-        }
+     
+       
         
         // llegir imatges del zip
         try {
@@ -702,7 +708,7 @@ public class ProjectePractiques {
                 tempBitmap = (WritableRaster) tempFrame.getData();
                 tempDecoded = tempBitmap.createWritableChild(tempFrame.getMinX(), tempFrame.getMinY(), tempFrame.getWidth(), tempFrame.getHeight(), 0,0, null);
 
-                tempData = recoveredData.get(recoveredDataCounter);
+                tempData = dataList.get(recoveredDataCounter);
                 recoveredDataCounter++;
 
                 //System.out.println(tempData.bestTilesX);
@@ -723,6 +729,7 @@ public class ProjectePractiques {
                 // guardar-la
                 tempBufferedImage = new BufferedImage(tempFrame.getColorModel(),tempDecoded,tempFrame.isAlphaPremultiplied(),null);
                 imageDict.put(imageNames.get(i), tempBufferedImage);
+                tempFrameI = tempBufferedImage;
             }
             z++;
         }
