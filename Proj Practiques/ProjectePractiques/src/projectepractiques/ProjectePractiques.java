@@ -16,6 +16,7 @@ import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
@@ -68,9 +69,9 @@ public class ProjectePractiques {
         
         // Encoding mode
         if (args.encode == 1) {
-            System.out.println("Encoding mode (work in progress)");
+            System.out.println("- Encoding mode -");
             try {
-                System.out.println("Reading zip file...");
+                System.out.println("    Reading zip file...");
                 readZip(args.input);
             } catch (IOException ex) {
                 Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);
@@ -99,7 +100,7 @@ public class ProjectePractiques {
             if(args.batch == 0){
                 VideoPlayer vp = new VideoPlayer(args.fps, imageNames, new HashMap<>(imageDict));
                 Thread t = new Thread(vp);
-                System.out.println("Starting videoplayer thread...");
+                System.out.println("    Starting videoplayer thread...");
                 t.start();
             }
             
@@ -107,30 +108,55 @@ public class ProjectePractiques {
             
             // Save images into zip in JPEG format to the specified path
             try {
-                System.out.println("Saving images to: " + args.output);
+                System.out.println("    Saving images to: " + args.output);
                 saveToZip(args.output);
             } catch (IOException ex) {
                 Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);
             }
+            File original = new File(args.input);
+            long original_size = original.length();
             
+            File jpeg = new File(args.output);
+            long jpeg_size = jpeg.length();
+            
+            double qualityFactor_jpeg = qualityFactor(imageDict.get(imageNames.get(0)), imageDict.get(imageNames.get(1)));
+            String qualityFactor_jpeg_text = String.format("%.2f", qualityFactor_jpeg);
             try {
+                long codeStart = System.nanoTime();
                 codeAllImages(args);
+                long codeEnd = System.nanoTime();
+                System.out.println("    Coding time(seconds): " + (codeEnd - codeStart) / 1000000000.0);
             } catch (IOException ex) {
                 Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);          
             }
             
+            
+            File coded = new File(args.output);
+            long coded_size = coded.length();
+            System.out.println("    - Estadístiques de la codificació -");
+            System.out.println("      Factor de qualitat original: " + qualityFactor_jpeg_text );
+            System.out.println("      Original file size: " + (original_size / 1024) + "(KB)");
+            System.out.println("      JPEG only file size: " + (jpeg_size / 1024) + "(KB)");
+            System.out.println("      Coded file size: " + (coded_size / 1024) + "(KB)");
+            System.out.println("      Factor de compressió(respecte JPEG only): " + (float) coded_size / jpeg_size);
+            
+            
+            
         }
         if(args.decode == 1){
+            System.out.println("- Decoding mode -");
+            long codeStart = System.nanoTime();
             decodeAllImages(args);
+            long codeEnd = System.nanoTime();
+            System.out.println("    Decoding time(seconds): " + (codeEnd - codeStart) / 1000000000.0);
+            
+            double qualityFactor_decoded = qualityFactor(imageDict.get(imageNames.get(0)), imageDict.get(imageNames.get(1)));
+            String qualityFactor_decoded_text = String.format("%.2f", qualityFactor_decoded);
+            System.out.println("    Factor de qualitat decodificada: " + qualityFactor_decoded_text);
             
             try {
-                System.out.println("Saving images to: " + "decocde.zip");
-                saveToZip("decode.zip");
-            } catch (IOException ex) {
-                Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);
-            }
-            try {
-                readZip("decode.zip");
+                System.out.println("    Saving images to: " + args.output);
+                saveToZip(args.output);
             } catch (IOException ex) {
                 Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);
             }
@@ -138,7 +164,7 @@ public class ProjectePractiques {
             if(args.batch == 0){
                 VideoPlayer vp = new VideoPlayer(args.fps, imageNames, new HashMap<>(imageDict));
                 Thread t = new Thread(vp);
-                System.out.println("Starting videoplayer thread...");
+                System.out.println("    Starting videoplayer thread...");
                 t.start();
             }
             
@@ -153,16 +179,6 @@ public class ProjectePractiques {
         InputStream is = new BufferedInputStream(new FileInputStream(imagePath));
         buffer = ImageIO.read(is);
         return buffer;
-    }
-    
-    //Unused
-    // Creates a JFrame with a label, containing the given image
-    public static void showImage(BufferedImage image) {
-        JFrame frame = new JFrame();
-        JLabel label = new JLabel(new ImageIcon(image));
-        frame.getContentPane().add(label, BorderLayout.CENTER);
-        frame.pack();
-        frame.setVisible(true);
     }
     
     // Returns the color of a pixel from a BufferedImage, given x and y
@@ -183,22 +199,10 @@ public class ProjectePractiques {
         int  red   = (clr & 0x00ff0000) >> 16;
         int  green = (clr & 0x0000ff00) >> 8;
         int  blue  =  clr & 0x000000ff;
-//        System.out.println("Red Color value = "+ red);
-//        System.out.println("Green Color value = "+ green);
-//        System.out.println("Blue Color value = "+ blue);
         colors[0] = red;
         colors[1] = green;
         colors[2] = blue;
         return colors;
-    }
-    
-    //Unused
-    // Testing function used to trim the image using a WritableRaster
-    public static void subImage(BufferedImage image) {
-        WritableRaster bitmap = (WritableRaster) image.getData();
-        WritableRaster tesela = bitmap.createWritableChild(image.getMinX(), image.getMinY(), 100, 50, 0,0, null);
-        BufferedImage subImage = new BufferedImage(image.getColorModel(),tesela,image.isAlphaPremultiplied(),null);
-        showImage(subImage);
     }
     
     // Reads a zip file and loads the images into a HashMap, plus ordering them by name
@@ -402,24 +406,6 @@ public class ProjectePractiques {
         fis.close();
     }
     
-    public static void startEncode(int nTiles, int gop, int thrs) {
-        BufferedImage frameI;
-        
-        for (String imgName: imageNames) {
-            for (int i = 0; i < gop; i++) {
-                if (i == 0) {
-                    frameI = imageDict.get(imgName);
-                } else {
-                    
-                }
-                    
-            }
-        }
-        
-
-        
-    }
-    
     public static ArrayList<Tile> doTiles(BufferedImage img, int tileSize) {
         allTiles = new ArrayList();
         
@@ -459,6 +445,40 @@ public class ProjectePractiques {
     
     public static double compareImg3(double x, double y, double z, double x2,double y2, double z2) {
         return  ( ((float) (Math.abs(x-x2) / 255.0) + ((float) Math.abs(y-y2) / 255.0) + ((float) Math.abs(z-z2) / 255.0)) / 3 * 100);
+    }
+    
+    public static double qualityFactor(BufferedImage img1, BufferedImage img2){
+        int imagePixels1 = img1.getWidth() * img1.getHeight();
+        int[] colorsTile1;
+        int red = 0, green=0, blue = 0;
+        for (int tileX = 0; tileX < img1.getWidth(); tileX++) {
+            for (int tileY = 0; tileY < img1.getHeight(); tileY++) {
+                colorsTile1 = getPixelColor(img1,tileX,tileY);
+                red += colorsTile1[0];
+                green += colorsTile1[1];
+                blue += colorsTile1[2];
+            }
+        }
+        double meanRed1 = (double) red / imagePixels1;
+        double meanGreen1 = (double) green /  imagePixels1;
+        double meanBlue1 = (double) blue /  imagePixels1;
+        
+        int imagePixels2 = img2.getWidth() * img2.getHeight();
+        int[] colorsTile2;
+        int red2 = 0, green2 = 0, blue2 = 0;
+        for (int tileX = 0; tileX < img2.getWidth(); tileX++) {
+            for (int tileY = 0; tileY < img2.getHeight(); tileY++) {
+                colorsTile2 = getPixelColor(img2,tileX,tileY);
+                red2 += colorsTile2[0];
+                green2 += colorsTile2[1];
+                blue2 += colorsTile2[2];
+            }
+        }
+        double meanRed2 = (double) red2 / imagePixels2;
+        double meanGreen2 = (double) green2 /  imagePixels2;
+        double meanBlue2 = (double) blue2 /  imagePixels2;
+        
+        return compareImg3(meanRed1, meanGreen1, meanBlue1, meanRed2, meanGreen2, meanBlue2);
     }
     
     
@@ -609,7 +629,7 @@ public class ProjectePractiques {
     public static void codeAllImages(Args args) throws FileNotFoundException, IOException{
         BufferedImage tempI=null, tempP=null;
         BufferedImage[] codeOut = null;
-        FileOutputStream fos = new FileOutputStream("test.zip");
+        FileOutputStream fos = new FileOutputStream(args.output);
         ZipOutputStream zipOS = new ZipOutputStream(fos);
         int j = 0;
         for(int i= 0; i < imageNames.size(); i++){ 
@@ -745,5 +765,14 @@ public class ProjectePractiques {
         } catch (IOException ex) {
             Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);
         }
+    }
+    
+    // Creates a JFrame with a label, containing the given image
+    public static void showImage(BufferedImage image) {
+        JFrame frame = new JFrame();
+        JLabel label = new JLabel(new ImageIcon(image));
+        frame.getContentPane().add(label, BorderLayout.CENTER);
+        frame.pack();
+        frame.setVisible(true);
     }
 }

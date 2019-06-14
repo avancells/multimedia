@@ -21,7 +21,7 @@ public class Args {
     String input = "";
     
     @Parameter(names = { "--codedInput", "-ci" }, description = "Fitxer d’entrada a la descodificació.")
-    String codedInput = "test.zip";
+    String codedInput = "saved_images.zip";
 
     @Parameter(names = { "--output", "-o" }, description = " Nom del fitxer en format propi amb la seqüència d’imatges\n" +
 "de sortida i la informació necessària per la descodificació.")

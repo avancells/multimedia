@@ -57,7 +57,7 @@ public class VideoPlayer extends JFrame implements Runnable {
     }
     //Function that reproduces the video (images)
     public void play(){
-        System.out.println("Displaying images at: " + fps + " fps");
+        System.out.println("    Displaying images at: " + fps + " fps");
         //For every image, show it with a certain interval (aka fps)
         for(int i= 0; i < imageNames.size(); i++){  
             label.setIcon(new ImageIcon(imageDict.get(imageNames.get(i))));
