@@ -1,3 +1,4 @@
+tilesize threshold seekrange gop | codeTime codedSize compressionFactor | decodeTime qualityFactor
 8 2 6 2 | 23.55519695 1124546 1.0588646 | 0.517580924 2,58
 
 8 2 6 4 | 34.643206299 1154440 1.0870126 | 0.621538234 2,58

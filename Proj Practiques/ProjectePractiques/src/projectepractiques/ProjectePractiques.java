@@ -81,23 +81,23 @@ public class ProjectePractiques {
             }
 
             // for each image read
-//            for (int i = 0; i < imageNames.size(); i++) {
-//                
-//                // apply averaging
-//                if (args.average > 0) {
-//                    imageDict.put(imageNames.get(i), average(imageDict.get(imageNames.get(i)),args.average));
-//                }
-//                
-//                // apply binaritzation
-//                if (args.bin > -1) {
-//                    imageDict.put(imageNames.get(i), binaritzation(imageDict.get(imageNames.get(i)),args.bin));
-//                }
-//                
-//                // apply negative filter
-//                if (args.negative == 1){
-//                    imageDict.put(imageNames.get(i), negative(imageDict.get(imageNames.get(i))));
-//                }
-//            }
+            for (int i = 0; i < imageNames.size(); i++) {
+                
+                // apply averaging
+                if (args.average > 0) {
+                    imageDict.put(imageNames.get(i), average(imageDict.get(imageNames.get(i)),args.average));
+                }
+                
+                // apply binaritzation
+                if (args.bin > -1) {
+                    imageDict.put(imageNames.get(i), binaritzation(imageDict.get(imageNames.get(i)),args.bin));
+                }
+                
+                // apply negative filter
+                if (args.negative == 1){
+                    imageDict.put(imageNames.get(i), negative(imageDict.get(imageNames.get(i))));
+                }
+            }
             
             // Start videoplayer thread
             if(args.batch == 0){
