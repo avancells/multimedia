@@ -26,6 +26,9 @@ public class Args {
     @Parameter(names = { "--output", "-o" }, description = " Nom del fitxer en format propi amb la seqüència d’imatges\n" +
 "de sortida i la informació necessària per la descodificació.")
     String output = "saved_images.zip";
+    
+    @Parameter(names = { "--decodedOutput"}, description = "Fitxer de sortida del video decodificat")
+    String decodedOutput = "saved_decoded_images.zip";
 
     @Parameter(names = { "-e", "--encode" }, description = "Argument que indica que s’haurà d’aplicar la codificació sobre el conjunt d’imatges\n" +
 "d’input i guardar el resultat al lloc indicat per output. Si és 1 estarà activat, si és 0 desactivat.")
@@ -46,6 +49,12 @@ public class Args {
     
     @Parameter(names = "--averaging", description = "aplicació d’un filtre de promig en zones de value x value.")
     int average = 0;
+    
+    @Parameter(names = "--decoAvg", description = "aplicació d’un filtre de promig en zones de value x value, exclusivament al resultat de la decodificació.")
+    int decoAvg = 0;
+    
+    @Parameter(names = "--comparator", description = "determina la funció de comparació a utilitzar.")
+    int comparator = 0;
     
     @Parameter(names = "--tileSize", description = "Mida de les tesel·les.")
     int tileSize = 8;

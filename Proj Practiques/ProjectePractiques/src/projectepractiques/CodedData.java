@@ -19,6 +19,7 @@ public class CodedData implements Serializable{
     ArrayList<Integer> bestOriginY = new ArrayList<>();
     int tileWidth;
     int tileHeight;
+    int gop;
     
     public CodedData(ArrayList<Integer> bestTilesX, ArrayList<Integer> bestTilesY, ArrayList<Integer> bestOriginX, ArrayList<Integer> bestOriginY, int tileWidth, int tileHeight){
         this.bestTilesX = bestTilesX;

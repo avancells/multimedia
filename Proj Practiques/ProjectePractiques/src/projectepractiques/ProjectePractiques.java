@@ -72,29 +72,29 @@ public class ProjectePractiques {
             System.out.println("- Encoding mode -");
             try {
                 System.out.println("    Reading zip file...");
-                readZip(args.input);
+                readZip(args.input, true);
             } catch (IOException ex) {
                 Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);
             }
 
             // for each image read
-            for (int i = 0; i < imageNames.size(); i++) {
-                
-                // apply averaging
-                if (args.average > 0) {
-                    imageDict.put(imageNames.get(i), average(imageDict.get(imageNames.get(i)),args.average));
-                }
-                
-                // apply binaritzation
-                if (args.bin > -1) {
-                    imageDict.put(imageNames.get(i), binaritzation(imageDict.get(imageNames.get(i)),args.bin));
-                }
-                
-                // apply negative filter
-                if (args.negative == 1){
-                    imageDict.put(imageNames.get(i), negative(imageDict.get(imageNames.get(i))));
-                }
-            }
+//            for (int i = 0; i < imageNames.size(); i++) {
+//                
+//                // apply averaging
+//                if (args.average > 0) {
+//                    imageDict.put(imageNames.get(i), average(imageDict.get(imageNames.get(i)),args.average));
+//                }
+//                
+//                // apply binaritzation
+//                if (args.bin > -1) {
+//                    imageDict.put(imageNames.get(i), binaritzation(imageDict.get(imageNames.get(i)),args.bin));
+//                }
+//                
+//                // apply negative filter
+//                if (args.negative == 1){
+//                    imageDict.put(imageNames.get(i), negative(imageDict.get(imageNames.get(i))));
+//                }
+//            }
             
             // Start videoplayer thread
             if(args.batch == 0){
@@ -155,11 +155,21 @@ public class ProjectePractiques {
             System.out.println("    Factor de qualitat decodificada: " + qualityFactor_decoded_text);
             
             try {
-                System.out.println("    Saving images to: " + args.output);
-                saveToZip(args.output);
+                System.out.println("    Saving images to: " + args.decodedOutput);
+                saveToZip(args.decodedOutput);
             } catch (IOException ex) {
                 Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);
             }
+            
+            if(args.decoAvg > 0){
+                // for each image read
+                for (int i = 0; i < imageNames.size(); i++) {
+                    // apply averaging
+                    imageDict.put(imageNames.get(i), average(imageDict.get(imageNames.get(i)),args.decoAvg));
+                }
+            }
+            
+            
             // Start videoplayer thread
             if(args.batch == 0){
                 VideoPlayer vp = new VideoPlayer(args.fps, imageNames, new HashMap<>(imageDict));
@@ -167,6 +177,8 @@ public class ProjectePractiques {
                 System.out.println("    Starting videoplayer thread...");
                 t.start();
             }
+            
+            
             
             
         }
@@ -206,7 +218,7 @@ public class ProjectePractiques {
     }
     
     // Reads a zip file and loads the images into a HashMap, plus ordering them by name
-    public static void readZip(String zipPath) throws IOException {
+    public static void readZip(String zipPath, boolean sort) throws IOException {
 
         // Load zip and its entries
         ZipFile zip = new ZipFile(new File(zipPath));
@@ -237,9 +249,13 @@ public class ProjectePractiques {
         }
         zip.close();
         // Sort the image names list
-        //Collections.sort(imageNames, (String f1, String f2) -> f1.compareTo(f2)); 
+        if(sort){
+            Collections.sort(imageNames, (String f1, String f2) -> f1.compareTo(f2)); 
+        }
         
     }
+    
+    
     
     //Unused (moved to VideoPlayer.java)
     // Creates a new JFrame containing an image, and cicles through the list of loaded images in order to play them
@@ -444,7 +460,20 @@ public class ProjectePractiques {
     }
     
     public static double compareImg3(double x, double y, double z, double x2,double y2, double z2) {
-        return  ( ((float) (Math.abs(x-x2) / 255.0) + ((float) Math.abs(y-y2) / 255.0) + ((float) Math.abs(z-z2) / 255.0)) / 3 * 100);
+        return  (10 * ((float) (Math.abs(x-x2) / 255.0) + ((float) Math.abs(y-y2) / 255.0) + ((float) Math.abs(z-z2) / 255.0)) / 3 * 100);
+    }
+    
+    public static double compareSelector(int compFunc, double x, double y, double z, double x2,double y2, double z2){
+        switch(compFunc){
+            case 1:
+                return compareImg(x, y, z, x2, y2, z2);
+            case 2:
+                return compareImg2(x, y, z, x2, y2, z2);
+            case 3: 
+                return compareImg3(x, y, z, x2, y2, z2);
+            default:
+                return compareImg3(x, y, z, x2, y2, z2);
+        }
     }
     
     public static double qualityFactor(BufferedImage img1, BufferedImage img2){
@@ -482,7 +511,7 @@ public class ProjectePractiques {
     }
     
     
-    public static BufferedImage[] createCodedImg(BufferedImage frameI, BufferedImage frameP, int thrs, int tileSize, int seekRange) {
+    public static BufferedImage[] createCodedImg(BufferedImage frameI, BufferedImage frameP, int thrs, int tileSize, int seekRange, int comparator) {
         ArrayList<Tile> tilesP = doTiles(frameP,tileSize);
         ArrayList<Integer> bestTilesX = new ArrayList<>();
         ArrayList<Integer> bestTilesY = new ArrayList<>();
@@ -574,7 +603,7 @@ public class ProjectePractiques {
                     
 
                     
-                    compareValue = compareImg2(meanRedX,meanGreenX,meanBlueX,meanRed,meanGreen,meanBlue);
+                    compareValue = compareSelector(comparator,meanRedX,meanGreenX,meanBlueX,meanRed,meanGreen,meanBlue);
                     //System.out.println(compareValue);
                     if ( compareValue < thrs && seekY <= frameP.getHeight() - tileSize &&  seekX <= frameP.getWidth() - tileSize) {
                         //see you tmrrw;
@@ -633,7 +662,7 @@ public class ProjectePractiques {
         ZipOutputStream zipOS = new ZipOutputStream(fos);
         int j = 0;
         for(int i= 0; i < imageNames.size(); i++){ 
-            if(j >= (imageNames.size()/args.gop)){
+            if(j >= (args.gop)){
                 j=0;
             }
             if(j==0){
@@ -642,7 +671,7 @@ public class ProjectePractiques {
                 imgToZip(tempI, i, zipOS, "image_coded_");
             }else{
                 //Frame P
-                codeOut = createCodedImg(tempI, imageDict.get(imageNames.get(i)), args.thresh, args.tileSize, args.seekRange);
+                codeOut = createCodedImg(tempI, imageDict.get(imageNames.get(i)), args.thresh, args.tileSize, args.seekRange, args.comparator);
                 imgToZip(codeOut[0], i, zipOS, "image_coded_");
                 tempI = codeOut[1];
                 //showImage(tempP);
@@ -652,6 +681,7 @@ public class ProjectePractiques {
             
             //imageDict.get(imageNames.get(i))
         }
+        dataList.get(0).gop = args.gop;
         
         try {
             FileOutputStream out = new FileOutputStream("codedData.gz");
@@ -700,7 +730,7 @@ public class ProjectePractiques {
         // llegir imatges del zip
         try {
             System.out.println("Reading zip file...");
-            readZip(args.codedInput);
+            readZip(args.codedInput, false);
         } catch (IOException ex) {
             Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -708,6 +738,8 @@ public class ProjectePractiques {
         WritableRaster tempBitmap=null;
         WritableRaster tempDecoded=null;
         CodedData tempData=null;
+        int gop = dataList.get(0).gop;
+        System.out.println(gop);
         
         BufferedImage tempBufferedImage = null;
         
@@ -716,7 +748,7 @@ public class ProjectePractiques {
         int recoveredDataCounter = 0;
         // per cada imatge
         for(int i= 0; i < imageNames.size(); i++){
-            if(z >= (imageNames.size()/args.gop)){
+            if(z >= (gop)){
                 z=0;
             }
             if(z == 0){
