@@ -7,14 +7,17 @@ import java.awt.Dimension;
 import java.awt.image.BufferedImage;
 import java.awt.image.WritableRaster;
 import java.io.BufferedInputStream;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -121,11 +124,13 @@ public class ProjectePractiques {
             
             double qualityFactor_jpeg = qualityFactor(imageDict.get(imageNames.get(0)), imageDict.get(imageNames.get(1)));
             String qualityFactor_jpeg_text = String.format("%.2f", qualityFactor_jpeg);
+            double finalTime=-1;
             try {
                 long codeStart = System.nanoTime();
                 codeAllImages(args);
                 long codeEnd = System.nanoTime();
-                System.out.println("    Coding time(seconds): " + (codeEnd - codeStart) / 1000000000.0);
+                finalTime = ((codeEnd - codeStart) / 1000000000.0);
+                System.out.println("    Coding time(seconds): " + finalTime);
             } catch (IOException ex) {
                 Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);          
             }
@@ -138,7 +143,12 @@ public class ProjectePractiques {
             System.out.println("      Original file size: " + (original_size / 1024) + "(KB)");
             System.out.println("      JPEG only file size: " + (jpeg_size / 1024) + "(KB)");
             System.out.println("      Coded file size: " + (coded_size / 1024) + "(KB)");
-            System.out.println("      Factor de compressió(respecte JPEG only): " + (float) coded_size / jpeg_size);
+            float factor = (float) coded_size / jpeg_size;
+            System.out.println("      Factor de compressió(respecte JPEG only): " + factor);
+            
+            if(args.batch == 1){
+                addBatchResultsEncode(args, finalTime, coded_size, factor);
+            }
             
             
             
@@ -148,7 +158,8 @@ public class ProjectePractiques {
             long codeStart = System.nanoTime();
             decodeAllImages(args);
             long codeEnd = System.nanoTime();
-            System.out.println("    Decoding time(seconds): " + (codeEnd - codeStart) / 1000000000.0);
+            double finalTime = ((codeEnd - codeStart) / 1000000000.0);
+            System.out.println("    Decoding time(seconds): " + finalTime);
             
             double qualityFactor_decoded = qualityFactor(imageDict.get(imageNames.get(0)), imageDict.get(imageNames.get(1)));
             String qualityFactor_decoded_text = String.format("%.2f", qualityFactor_decoded);
@@ -176,6 +187,8 @@ public class ProjectePractiques {
                 Thread t = new Thread(vp);
                 System.out.println("    Starting videoplayer thread...");
                 t.start();
+            }else{
+                addBatchResultsDecode(finalTime, qualityFactor_decoded_text);
             }
             
             
@@ -806,5 +819,31 @@ public class ProjectePractiques {
         frame.getContentPane().add(label, BorderLayout.CENTER);
         frame.pack();
         frame.setVisible(true);
+    }
+    
+    public static void addBatchResultsEncode(Args args, double finalTime, long coded_size, float factor){
+        BufferedWriter output;
+        // tilesize threshold seekrange gop | codeTime codedSize compressionFactor | decodeTime qualityFactor
+        try {
+            output = new BufferedWriter(new FileWriter("encodeBatch.txt", true));
+            String result = args.tileSize + " " + args.thresh + " " + args.seekRange + " " + args.gop + " | " + finalTime + " " + coded_size + " " + factor;
+            output.append(result);
+            output.close();
+        } catch (IOException ex) {
+            Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
+    public static void addBatchResultsDecode(double finalTime, String factorQualitat){
+        BufferedWriter output;
+        try {
+            output = new BufferedWriter(new FileWriter("encodeBatch.txt", true));
+            String result = " | " + finalTime + " " + factorQualitat + "\n";
+            output.append(result);
+            output.newLine();
+            output.close();
+        } catch (IOException ex) {
+            Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 }
