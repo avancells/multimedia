@@ -1,8 +1,4 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
+
 package projectepractiques;
 
 import com.beust.jcommander.Parameter;
@@ -10,8 +6,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- *
- * @author BlaiSB
+ * Class that lists all the possible params of the application with his default values & description
+ * @author Blai Ras i Arnau Vancells
  */
 public class Args {
     @Parameter
@@ -20,7 +16,7 @@ public class Args {
     @Parameter(names = { "--input", "-i" }, description = "Fitxer d’entrada. Argument obligatori.")
     String input = "";
     
-    @Parameter(names = { "--codedInput", "-ci" }, description = "Fitxer d’entrada a la descodificació.")
+    @Parameter(names = { "--codedInput", "-ci" }, description = "Fitxer d’entrada a la descodificació. Argument obligatori.")
     String codedInput = "saved_images.zip";
 
     @Parameter(names = { "--output", "-o" }, description = " Nom del fitxer en format propi amb la seqüència d’imatges\n" +
@@ -50,7 +46,7 @@ public class Args {
     @Parameter(names = "--averaging", description = "aplicació d’un filtre de promig en zones de value x value.")
     int average = 0;
     
-    @Parameter(names = "--decoAvg", description = "aplicació d’un filtre de promig en zones de value x value, exclusivament al resultat de la decodificació.")
+    @Parameter(names = "--decoAvg", description = "aplicació d’un filtre de promig en zones de value x value, exclusivament al resultat de la decodificació. Es podria considerar un filtre Smooth")
     int decoAvg = 0;
     
     @Parameter(names = "--comparator", description = "determina la funció de comparació a utilitzar.")

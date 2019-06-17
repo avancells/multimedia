@@ -42,11 +42,16 @@ import java.util.zip.GZIPOutputStream;
  * @author Blai Ras i Arnau Vancells
  */
 public class ProjectePractiques {
-    
+
+    //Array with all the image names
     public static ArrayList<String> imageNames = new ArrayList<>();
+    //Array with all the images ready to be zipped
     public static ArrayList<BufferedImage> imagesToZip = new ArrayList<>();
+    //Diccionari ImageName - Image (bufferedImage)
     public static Map<String, BufferedImage> imageDict = new HashMap<>();
+    //Array with all the tiles of every image
     public static ArrayList<Tile> allTiles = new ArrayList<>();
+    //Array with all the Data needed for the decode
     public static ArrayList<CodedData> dataList = new ArrayList<>();
 
     /**
@@ -73,6 +78,7 @@ public class ProjectePractiques {
         // Encoding mode
         if (args.encode == 1) {
             System.out.println("- Encoding mode -");
+            //First of all, read all the data to code
             try {
                 System.out.println("    Reading zip file...");
                 readZip(args.input, true);
@@ -116,14 +122,20 @@ public class ProjectePractiques {
             } catch (IOException ex) {
                 Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);
             }
+
+            //Here we compute the analytics of our code
+
+            //Size of the original zip fle
             File original = new File(args.input);
             long original_size = original.length();
             
+            //Size of the jpeg file
             File jpeg = new File(args.output);
             long jpeg_size = jpeg.length();
-            
+           	//Compute our quality factor
             double qualityFactor_jpeg = qualityFactor(imageDict.get(imageNames.get(0)), imageDict.get(imageNames.get(1)));
             String qualityFactor_jpeg_text = String.format("%.2f", qualityFactor_jpeg);
+            //Compute the coding time
             double finalTime=-1;
             try {
                 long codeStart = System.nanoTime();
@@ -135,7 +147,7 @@ public class ProjectePractiques {
                 Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);          
             }
             
-            
+            //Size of the result zip file, coded
             File coded = new File(args.output);
             long coded_size = coded.length();
             System.out.println("    - Estadístiques de la codificació -");
@@ -146,6 +158,9 @@ public class ProjectePractiques {
             float factor = (float) coded_size / jpeg_size;
             System.out.println("      Factor de compressió(respecte JPEG only): " + factor);
             
+            //Mode used to check the perfomance of our code
+            //It creates a .txt file with time & quality results
+            //Videoplayer doesn't pop!
             if(args.batch == 1){
                 addBatchResultsEncode(args, finalTime, coded_size, factor);
             }
@@ -153,14 +168,16 @@ public class ProjectePractiques {
             
             
         }
+        //Decoding mode
         if(args.decode == 1){
             System.out.println("- Decoding mode -");
+            //Start computing the decoding time
             long codeStart = System.nanoTime();
             decodeAllImages(args);
             long codeEnd = System.nanoTime();
             double finalTime = ((codeEnd - codeStart) / 1000000000.0);
             System.out.println("    Decoding time(seconds): " + finalTime);
-            
+            //Compute our quality factor
             double qualityFactor_decoded = qualityFactor(imageDict.get(imageNames.get(0)), imageDict.get(imageNames.get(1)));
             String qualityFactor_decoded_text = String.format("%.2f", qualityFactor_decoded);
             System.out.println("    Factor de qualitat decodificada: " + qualityFactor_decoded_text);
@@ -171,7 +188,7 @@ public class ProjectePractiques {
             } catch (IOException ex) {
                 Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);
             }
-            
+            //'Smooth' filter, aka averaging filter, for better looks
             if(args.decoAvg > 0){
                 // for each image read
                 for (int i = 0; i < imageNames.size(); i++) {
@@ -188,17 +205,14 @@ public class ProjectePractiques {
                 System.out.println("    Starting videoplayer thread...");
                 t.start();
             }else{
+            	//Write to the results .txt file the output of the decode data
                 addBatchResultsDecode(finalTime, qualityFactor_decoded_text);
-            }
-            
-            
-            
-            
+            }    
         }
-        
     }
     
-    // Read image from path, and load it into a BufferedImage object
+    //Unused 
+    //Read image from path, and load it into a BufferedImage object
     public static BufferedImage readImage(String imagePath) throws FileNotFoundException, IOException {
         BufferedImage buffer;
         InputStream is = new BufferedInputStream(new FileInputStream(imagePath));
@@ -208,19 +222,16 @@ public class ProjectePractiques {
     
     // Returns the color of a pixel from a BufferedImage, given x and y
    public static int[] getPixelColor(BufferedImage image,int x,int y) {
-       
         int colors[] = new int[3];
         int clr = 0;
-        
+
         try{
             clr = image.getRGB(x,y); 
         }catch(Exception e){
             System.out.println(e);
             System.out.println(x + " " + y);
         }
-        
-        
-        
+
         int  red   = (clr & 0x00ff0000) >> 16;
         int  green = (clr & 0x0000ff00) >> 8;
         int  blue  =  clr & 0x000000ff;
@@ -232,17 +243,15 @@ public class ProjectePractiques {
     
     // Reads a zip file and loads the images into a HashMap, plus ordering them by name
     public static void readZip(String zipPath, boolean sort) throws IOException {
-
         // Load zip and its entries
         ZipFile zip = new ZipFile(new File(zipPath));
-        
         Enumeration<? extends ZipEntry> entries = zip.entries();
-        
         // Read every entry and load it to the HashMap
         while(entries.hasMoreElements()) {
-            
             ZipEntry zipEntry = entries.nextElement();
             InputStream entryStream = zip.getInputStream(zipEntry);
+            //Used only for the decoding mode
+            //Compressed file that contains the Coded Data
             if("codedData.gz".equals(zipEntry.getName())){
                 FileInputStream in = new FileInputStream("codedData.gz");
                 GZIPInputStream gis = new GZIPInputStream(in);
@@ -257,19 +266,14 @@ public class ProjectePractiques {
                 imageNames.add(zipEntry.getName());            
                 imageDict.put(zipEntry.getName(), image);
             }
-            
-
         }
         zip.close();
         // Sort the image names list
         if(sort){
             Collections.sort(imageNames, (String f1, String f2) -> f1.compareTo(f2)); 
         }
-        
     }
-    
-    
-    
+
     //Unused (moved to VideoPlayer.java)
     // Creates a new JFrame containing an image, and cicles through the list of loaded images in order to play them
     // in a sequence, while controlling the FPS its played at
@@ -291,6 +295,7 @@ public class ProjectePractiques {
         }
 
     }
+
     //Applies bin filter with a treshold in a BufferedImage
     public static BufferedImage binaritzation(BufferedImage image, int thrs) {
         //3-position array where we store R,G,B values of every pixel
@@ -435,35 +440,39 @@ public class ProjectePractiques {
         fis.close();
     }
     
+    //Function that divides an image into a concrete number of tiles
+    //Returns an ArrayList where every position is a Tile (an image) 
     public static ArrayList<Tile> doTiles(BufferedImage img, int tileSize) {
-        allTiles = new ArrayList();
         
+        allTiles = new ArrayList();
         int propX = tileSize;//img.getWidth() / nTiles;
         int propY = tileSize;//img.getHeight() / nTiles;
-        
         int nTilesX = img.getWidth() / tileSize;
         int nTilesY = img.getHeight() / tileSize;
         
         WritableRaster wr = (WritableRaster) img.getData();
-        
-
+        //First 2 fors: maximum number of tiles watching the image width and height
         for (int i = 0; i < nTilesX; i++) {
             for (int j = 0; j < nTilesY; j++) {
+            	//Making sure we dont go out of bounds
                 if (i * propX + propX <= img.getWidth()) {
                     if (j * propY + propY <= img.getHeight()) {
+                    	//Create the tile image
                         WritableRaster tile = (WritableRaster)wr.createChild((i * propX), (j * propY), propX, propY, 0, 0, null);
                         BufferedImage buffTile = new BufferedImage(img.getColorModel(), tile, 
-                        img.getColorModel().isAlphaPremultiplied(), null);                        
+                        img.getColorModel().isAlphaPremultiplied(), null);
+                        //Create our Tile object with the image and sizes                  
                         Tile t = new Tile(buffTile, i*propX, j*propY);
+                        //Add the tile to the array of tiles of the image
                         allTiles.add(t);
                     }
                 }
             }
         }
-       
         return allTiles;
     }
     
+    //Functions used to mesure pixel correlation between 2 images
     public static double compareImg(double x, double y, double z, double x2,double y2, double z2) {
         return  Math.sqrt(Math.pow(x-x2, 2) + Math.pow(y-y2, 2)+ Math.pow(z-z2, 2));
     }
@@ -476,6 +485,7 @@ public class ProjectePractiques {
         return  (10 * ((float) (Math.abs(x-x2) / 255.0) + ((float) Math.abs(y-y2) / 255.0) + ((float) Math.abs(z-z2) / 255.0)) / 3 * 100);
     }
     
+    //Function that enables the user to decide wich compare function wants to use
     public static double compareSelector(int compFunc, double x, double y, double z, double x2,double y2, double z2){
         switch(compFunc){
             case 1:
@@ -489,10 +499,12 @@ public class ProjectePractiques {
         }
     }
     
+    //Function that compares the quality factor between an original image and the decoded one
     public static double qualityFactor(BufferedImage img1, BufferedImage img2){
         int imagePixels1 = img1.getWidth() * img1.getHeight();
         int[] colorsTile1;
         int red = 0, green=0, blue = 0;
+        //Get the mean of each channel of all pixels of the image 1
         for (int tileX = 0; tileX < img1.getWidth(); tileX++) {
             for (int tileY = 0; tileY < img1.getHeight(); tileY++) {
                 colorsTile1 = getPixelColor(img1,tileX,tileY);
@@ -508,6 +520,7 @@ public class ProjectePractiques {
         int imagePixels2 = img2.getWidth() * img2.getHeight();
         int[] colorsTile2;
         int red2 = 0, green2 = 0, blue2 = 0;
+        //Get the mean of each channel of all pixels of the image 2
         for (int tileX = 0; tileX < img2.getWidth(); tileX++) {
             for (int tileY = 0; tileY < img2.getHeight(); tileY++) {
                 colorsTile2 = getPixelColor(img2,tileX,tileY);
@@ -519,13 +532,16 @@ public class ProjectePractiques {
         double meanRed2 = (double) red2 / imagePixels2;
         double meanGreen2 = (double) green2 /  imagePixels2;
         double meanBlue2 = (double) blue2 /  imagePixels2;
-        
+        //Use the correlation function to get a quality coeficient
         return compareImg3(meanRed1, meanGreen1, meanBlue1, meanRed2, meanGreen2, meanBlue2);
     }
     
-    
+    //Function that codes an image using movement detection & compensation
+    //Creates tiles, compares pixel correlation, replaces tiles with the frame I pixels, stores the coded data for the decodification and returns the coded image
     public static BufferedImage[] createCodedImg(BufferedImage frameI, BufferedImage frameP, int thrs, int tileSize, int seekRange, int comparator) {
+        //Compute the tiles of the image
         ArrayList<Tile> tilesP = doTiles(frameP,tileSize);
+        //Lists that contains the important data of every tile
         ArrayList<Integer> bestTilesX = new ArrayList<>();
         ArrayList<Integer> bestTilesY = new ArrayList<>();
         ArrayList<Integer> bestOriginX = new ArrayList<>();
@@ -543,7 +559,6 @@ public class ProjectePractiques {
         double meanRedX, meanGreenX, meanBlueX;
         
         double nPixels;
-        
         double compareValue;
         
         WritableRaster bitmap = (WritableRaster) frameP.getData();
@@ -551,14 +566,15 @@ public class ProjectePractiques {
         WritableRaster frameP_mod = bitmap.createWritableChild(frameP.getMinX(), frameP.getMinY(), frameP.getWidth(), frameP.getHeight(), 0,0, null);
         WritableRaster ref_P = bitmap2.createWritableChild(frameP.getMinX(), frameP.getMinY(), frameP.getWidth(), frameP.getHeight(), 0,0, null);
 
+        //For every tile
         for (Tile tile: tilesP) {
-            
+
             double bestValue = 9999;
             int bestX = -1, bestY = -1;
             Tile bestTile = null;
-            
             nPixels = tile.getImg().getWidth() * tile.getImg().getHeight();
             int red = 0, green=0, blue = 0;
+            //Get the mean of every channel of every pixel of every tile
             for (int tileX = 0; tileX < tile.getImg().getWidth(); tileX++) {
                 for (int tileY = 0; tileY < tile.getImg().getHeight(); tileY++) {
                     colorsTileX = getPixelColor(tile.getImg(),tileX,tileY);
@@ -567,18 +583,13 @@ public class ProjectePractiques {
                     blue += colorsTileX[2];
                 }
             }
-            //System.out.println(tile.getX() + " " + tile.getY);
             meanRedX = (double) red / nPixels;
-
             meanGreenX = (double) green /  nPixels;
-
             meanBlueX = (double) blue /  nPixels;
-            
-            
-
-            
+        	//2 fors to iterate through the tile size + seekRange
             for (int seekX = tile.getX() - seekRange; seekX < tile.getX()+ seekRange; seekX++) {
                 for (int seekY = tile.getY() - seekRange; seekY < tile.getY()+ seekRange; seekY++) {
+                	//those if's correct the possible out of bounds coordinates
                     if (seekY < 0){
                         seekY = 0;
                     }
@@ -594,8 +605,8 @@ public class ProjectePractiques {
                     red = 0;
                     green = 0;
                     blue = 0;
-                    
-                    
+                    //2 fors that can be understand like a window that goes through the tile size + seekRange
+                    //Getting the values of every channel of every pixel so we can later compute the mean of every each of them
                     for (int f = seekX; f < seekX + tileSize; f++) {
                         for (int k = seekY; k < seekY + tileSize; k++) {
                             if((f < frameP.getWidth()) && (k < frameP.getHeight()) && (f >= 0) && (k >= 0)){
@@ -606,23 +617,18 @@ public class ProjectePractiques {
                             }
                         }
                     }
-                    
-
-                    
-                    
                     meanRed = (double) red / nPixels;
                     meanGreen = (double) green /  nPixels;
                     meanBlue = (double) blue /  nPixels;
-                    
 
-                    
+                    //Now that we have the 2 means, get the correlation factor
                     compareValue = compareSelector(comparator,meanRedX,meanGreenX,meanBlueX,meanRed,meanGreen,meanBlue);
-                    //System.out.println(compareValue);
+
+                    //If this value is over a treshold, replace the tile with the n-1 frame pixels
                     if ( compareValue < thrs && seekY <= frameP.getHeight() - tileSize &&  seekX <= frameP.getWidth() - tileSize) {
-                        //see you tmrrw;
-                        // guardar top tile
+                        //Maybe there's more than one 'window' that gets over the treshold
+                        //Get the best one!
                         if(compareValue < bestValue){
-                            //System.out.println(compareValue);
                             bestValue = compareValue;
                             bestTile = tile;
                             bestX = seekX;
@@ -632,49 +638,54 @@ public class ProjectePractiques {
 
                 }
             }
+         	//Now that we have the tile info,
             if(bestTile != null){
+            	//Iterate through it
                 for (int temp_tileX = tile.getX(); temp_tileX < tile.getImg().getWidth() + tile.getX(); temp_tileX++) {
                     for (int temp_tileY = tile.getY(); temp_tileY < tile.getImg().getHeight() + tile.getY(); temp_tileY++) {
+                    	//(Using the same array, but we decided to put the black color so we put zero in every pixel channel)
                         meanColor[0] = (int) 0;//meanRedX;
                         meanColor[1] = (int) 0;//meanGreenX;
                         meanColor[2] = (int) 0;//meanBlueX;
                         
-                        //ystem.out.println("temptilex: " + temp_tileX);
+                        //Replace the pixels of the tile with black color for the 'coded' image
                         frameP_mod.setPixel(temp_tileX,temp_tileY,meanColor);
-                        //System.out.println("x: " + (bestX + temp_tileX - bestTile.getX()) + " y: " + (bestY+(temp_tileY - bestTile.getY())));
+                        
+                        //And to the new 'frame I' image that were gonna use in the next iteration, replace the tile with the colors of the frame I image (the previous one)
                         colors = getPixelColor(frameI, bestX + (temp_tileX - tile.getX()), bestY+(temp_tileY - tile.getY()));
                         ref_P.setPixel(temp_tileX, temp_tileY, colors);
                         
                     }
                 }
+                //Add the info of the tiles for the decode
                 bestTilesX.add(bestTile.getX());
                 bestTilesY.add(bestTile.getY());
                 bestOriginX.add(bestX);
                 bestOriginY.add(bestY);
-                
             }
         }
-        
+        //Create the codedData object with all the info of every tile
         CodedData codedData = new CodedData(bestTilesX, bestTilesY, bestOriginX, bestOriginY, tileWidth, tileHeight);
-        dataList.add(codedData);
-        
+        dataList.add(codedData); //add it to the list
+        //Create the images and return it!
         BufferedImage frameP_new = new BufferedImage(frameP.getColorModel(),frameP_mod,frameP.isAlphaPremultiplied(),null);
         BufferedImage ref_buf = new BufferedImage(frameP.getColorModel(),ref_P,frameP.isAlphaPremultiplied(),null);
         BufferedImage[] result = new BufferedImage[2];
         result[0] = frameP_new;
         result[1] = ref_buf;
         return result;
-        
-        
     }
     
+    //Function that controlls the coding process
     public static void codeAllImages(Args args) throws FileNotFoundException, IOException{
         BufferedImage tempI=null, tempP=null;
         BufferedImage[] codeOut = null;
         FileOutputStream fos = new FileOutputStream(args.output);
         ZipOutputStream zipOS = new ZipOutputStream(fos);
         int j = 0;
+        //Iterate through all the images dividing them into frameP or frameI
         for(int i= 0; i < imageNames.size(); i++){ 
+            //j is a counter of the gop
             if(j >= (args.gop)){
                 j=0;
             }
@@ -690,12 +701,10 @@ public class ProjectePractiques {
                 //showImage(tempP);
             }
             j++;
-                
-            
-            //imageDict.get(imageNames.get(i))
         }
+        //Get the gop, its always the first position of the coded data
         dataList.get(0).gop = args.gop;
-        
+        //Store into a .gz file all the info of every tile of every image, info that is stored into our dataList
         try {
             FileOutputStream out = new FileOutputStream("codedData.gz");
             GZIPOutputStream gos = new GZIPOutputStream(out);
@@ -708,11 +717,10 @@ public class ProjectePractiques {
             oos.close();
             gos.close();
             out.close();
-            
         } catch (Exception e) {
             System.out.println("Problem serializing: " + e);
         }
-        
+       
         FileInputStream fis = new FileInputStream("codedData.gz");
         ZipEntry e = new ZipEntry("codedData.gz");
         zipOS.putNextEntry(e);
@@ -724,23 +732,19 @@ public class ProjectePractiques {
         }
         zipOS.closeEntry();
         fis.close();
-
         zipOS.finish(); //Good practice!
         zipOS.close();
-        
     }
     
+    //Function that controlls the decoding process
     public static void decodeAllImages(Args args){
-        imageNames.clear();
+       	//Now those arrays will contain 'decoded' images
+       	imageNames.clear();
         imagesToZip.clear();
         imageDict.clear();
-        
-        // llegir coded data
         ArrayList<CodedData> recoveredData = null;
-     
-       
-        
-        // llegir imatges del zip
+
+        //Read the coded images
         try {
             System.out.println("Reading zip file...");
             readZip(args.codedInput, false);
@@ -752,36 +756,31 @@ public class ProjectePractiques {
         WritableRaster tempDecoded=null;
         CodedData tempData=null;
         int gop = dataList.get(0).gop;
-        System.out.println(gop);
-        
+        //System.out.println(gop);
         BufferedImage tempBufferedImage = null;
-        
-        
         int z = 0;
+        //recoveredData[0] contains the info of the image 0, and so on
         int recoveredDataCounter = 0;
-        // per cada imatge
+        //For every image,
         for(int i= 0; i < imageNames.size(); i++){
+        	//z is a counter of the gop so we can decide if its a frameI or P
             if(z >= (gop)){
                 z=0;
             }
-            if(z == 0){
+            if(z == 0){//Frame I
+            	//Store it
                 tempFrameI = imageDict.get(imageNames.get(i));
                 imageDict.put(imageNames.get(i), tempFrameI);
             }else{
-                 // recuperar imatge
+                //Frame P, decode it
                 tempFrame = imageDict.get(imageNames.get(i)); 
                 tempBitmap = (WritableRaster) tempFrame.getData();
                 tempDecoded = tempBitmap.createWritableChild(tempFrame.getMinX(), tempFrame.getMinY(), tempFrame.getWidth(), tempFrame.getHeight(), 0,0, null);
-
+            	//Get his info
                 tempData = dataList.get(recoveredDataCounter);
                 recoveredDataCounter++;
-
-                //System.out.println(tempData.bestTilesX);
-                //System.out.println(tempData.tileWidth);
-                //System.out.println(tempData.tileHeight);
                 int[] tempColor;
-                //if (seekY + f >= 0 && seekX + k >= 0 && seekY + f < frameI.getHeight() && seekX + k < frameI.getWidth())
-                
+                //Iterate through the tile and replace its pixels
                 for(int k = 0; k < tempData.bestTilesX.size(); k++){
                     for (int baseX = 0; baseX < tempData.tileWidth ; baseX++) {
                         for (int baseY = 0; baseY < tempData.tileHeight; baseY++) {
@@ -790,17 +789,16 @@ public class ProjectePractiques {
                         }
                     }
                 }
-                
-                // guardar-la
+                //Store the new decoded image
                 tempBufferedImage = new BufferedImage(tempFrame.getColorModel(),tempDecoded,tempFrame.isAlphaPremultiplied(),null);
                 imageDict.put(imageNames.get(i), tempBufferedImage);
                 tempFrameI = tempBufferedImage;
             }
             z++;
         }
-
     }
-    
+
+    //Function that takes and image and writes it into a zip (with another function) in the jpg format
     public static void imgToZip(BufferedImage image, int number, ZipOutputStream zipOS, String path){
         try {
             File tempImage = new File(path+ number +".jpg");
@@ -811,8 +809,8 @@ public class ProjectePractiques {
             Logger.getLogger(ProjectePractiques.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-    
-    // Creates a JFrame with a label, containing the given image
+    //Unused, used only for debuggind and various checkings
+    //Creates a JFrame with a label, containing the given image
     public static void showImage(BufferedImage image) {
         JFrame frame = new JFrame();
         JLabel label = new JLabel(new ImageIcon(image));
@@ -821,8 +819,10 @@ public class ProjectePractiques {
         frame.setVisible(true);
     }
     
+   	//Function that stores into a .txt file the infodata resulting of the codification
     public static void addBatchResultsEncode(Args args, double finalTime, long coded_size, float factor){
         BufferedWriter output;
+        //The header is:
         // tilesize threshold seekrange gop | codeTime codedSize compressionFactor | decodeTime qualityFactor
         try {
             output = new BufferedWriter(new FileWriter("encodeBatch.txt", true));
@@ -834,6 +834,7 @@ public class ProjectePractiques {
         }
     }
     
+    //Function that stores into a .txt file the infodata resulting of the decodification
     public static void addBatchResultsDecode(double finalTime, String factorQualitat){
         BufferedWriter output;
         try {

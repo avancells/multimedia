@@ -1,16 +1,12 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
+
 package projectepractiques;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 
 /**
- *
- * @author Arnau Vancells
+ * Classe que representa un objecte amb la informacio essencial d'una tile + el GOP. No necesita getters/setters
+ * @author Arnau Vancells i Blai Ras
  */
 public class CodedData implements Serializable{
     ArrayList<Integer> bestTilesX = new ArrayList<>();

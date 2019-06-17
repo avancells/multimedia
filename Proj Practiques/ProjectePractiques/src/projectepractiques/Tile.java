@@ -8,14 +8,13 @@ package projectepractiques;
 import java.awt.image.BufferedImage;
 
 /**
- *
- * @author BlaiSB
+ * Class that represents 'a tile' with his image, his coordinates and setters/getters
+ * @author Blai Ras i Arnau Vancells
  */
 public class Tile {
-    
     private int x,y;
     private BufferedImage img;
-    
+
     public Tile(BufferedImage img, int x, int y) {
         this.x = x; this.y = y; this.img = img;
     }
